@@ -19,6 +19,7 @@ def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
     # Impulse/clap detection options
     parser.add_argument('-ct', '--clap_loudness_threshold', '--clap_threshold',     type=float, help="Threshold of the loudness change that must have been at least occured for a sound/ramp to be marked as clap/impulse [0.0, 1.0]", default=0.4)
     parser.add_argument('-cr', '--clap_release_time', '--clap_release',             type=float, help="Time in seconds from which another impulse can be detected after detecting an impulse in the audi", default=0.1)
+    parser.add_argument('-ploti', '--plot_impulse_detection', '--plot_impulses',    action="store_true", help="Show plots of the impulse/clap detection responses")
     parser.add_argument('-ns', '--no_clap_sync', '--no_sync',                       action="store_true", help="Do not detect the positions of claps in the video and audio file for the purpose of synchronizing those 2 recordings/files")
 
     # Song range/Audio activity range detection options
@@ -29,6 +30,7 @@ def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
     parser.add_argument('-ev', '--end_valley_threshold', '--end_valley',            type=float, help="Song range refinement valley detection threshold, range end will walk towards start of song until this sample value is reached", default=0.005)
     parser.add_argument('-spr', '--song_start_prerun', '--prerun',                  type=float, help="Time value in seconds added to the final detected start position after song range detection finished", default=-1.0)
     parser.add_argument('-spo', '--song_end_postrun', '--postrun',                  type=float, help="Time value in seconds added to the final detected end position after song range detection finished", default=0)
+    parser.add_argument('-plots', '--plot_song_activity_detection', '--plot_activity',    action="store_true", help="Show plots of the song/activity detection responses")
     parser.add_argument('-nr', '--no_on_range_detection', '--no_on_range',          action="store_true", help="Do not automatically detect where the song/audio action start, ends and cut the output video to that range when muxing")
 
     parser.add_argument('-tn', '--extract_thumbnails_count', '--thumbnails_n',      type=int, help="Amount of thumbnails to pull from the video into a new sibling directory ./thumbnails ", default=0)
@@ -60,7 +62,7 @@ def main():
 
     args: argparse.Namespace = parser.parse_args()
 
-    if (len(args.on_range_timestamps) > 2):
+    if (args.on_range_timestamps and len(args.on_range_timestamps) > 2):
         raise Exception("--on_range can not have more than 2 timestamps: one for start and one for end")
 
     video_file_path = args.video_src_path
@@ -69,10 +71,10 @@ def main():
     # audio_file_path = "230412_0072S12.wav"
 
     if (not args.on_range_timestamps):
-        args.on_range_timestamps = detect_song_time_range(video_file_path)
+        args.on_range_timestamps = detect_song_time_range(video_file_path, args)
 
     if (not args.remux_sync_offset_msec):
-        args.remux_sync_offset_msec = find_remux_sync_offset_msec(audio_file_path, video_file_path)
+        args.remux_sync_offset_msec = find_remux_sync_offset_msec(audio_file_path, video_file_path, args)
 
     processed_audio_file_path = audio_file_path
 
@@ -85,7 +87,10 @@ def main():
         # TODO song range timestamps have to consider the offset as we are truncating the output of the synced merge
         # args.on_range_timestamps = ('00:03:33.000', '00:09:24.000')
         # args.remux_sync_offset_msec = -3652
-        remuxed_video_file_path = remux_video_audio_with_offset(video_file_path, processed_audio_file_path, args.remux_sync_offset_msec, args.on_range_timestamps)
+        remuxed_video_file_path = remux_video_audio_with_offset(video_file_path, processed_audio_file_path, args.remux_sync_offset_msec, args.on_range_timestamps, args)
+
+        if (not args.keep_transient_files and processed_audio_file_path != audio_file_path):
+            os.path.unlink(processed_audio_file_path)
 
     if (args.extract_thumbnails_count > 0):
         # remuxed_video_file_path = "20231204_204607_remuxed.mkv"

@@ -1,5 +1,6 @@
+from typing import Any
 import numpy as np
-from common_audio_processing import apply_audio_differentiation, read_audio_of_files
+from common_audio_processing import apply_audio_differentiation, delete_video_extracted_audio, read_audio_of_files
 from time_conversion_util import msec_to_samples, msec_to_timestamp, sample_index_to_timestamp, samples_to_msec
 
 
@@ -95,7 +96,7 @@ def extract_clap_indices_of_files(file_paths):
     return claps_per_file_list, sample_rates_list
 
 
-def find_remux_sync_offset_msec(audio_file_path, video_file_path):
+def find_remux_sync_offset_msec(audio_file_path: str, video_file_path: str, options: dict[str, Any]):
 
     claps_per_file_list, sample_rates_list = extract_clap_indices_of_files([audio_file_path, video_file_path])
 
@@ -103,5 +104,8 @@ def find_remux_sync_offset_msec(audio_file_path, video_file_path):
 
     print(f"sync_offset_msec = {sync_offsets_msec[0]}")
     print(f"sync_offset_timestamp = {msec_to_timestamp(sync_offsets_msec[0])}")
+
+    if (not options.keep_transient_files):
+        delete_video_extracted_audio(video_file_path)
 
     return sync_offsets_msec[0]

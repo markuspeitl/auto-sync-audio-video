@@ -1,6 +1,8 @@
 
+import os
+from typing import Any
 import numpy as np
-from common_audio_processing import apply_audio_differentiation, read_audio_of_file, resample_audio
+from common_audio_processing import apply_audio_differentiation, delete_video_extracted_audio, read_audio_of_file, resample_audio
 from path_util import get_extracted_audio_path
 from time_conversion_util import sample_index_to_timestamp, sec_to_samples
 
@@ -164,16 +166,19 @@ def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: 
     return tuple(modified_index_list)
 
 
-def detect_song_time_range(video_file_path: str):
-    extracted_audio_path = get_extracted_audio_path(video_file_path)
+def detect_song_time_range(video_file_path: str, options: dict[str, Any]):
+    # extracted_audio_path = get_extracted_audio_path(video_file_path)
     sample_rate, audio_data = read_audio_of_file(video_file_path)
+
+    if (not options.keep_transient_files):
+        delete_video_extracted_audio(video_file_path)
 
     # show_waveforms(audio_data, sample_rate)
 
     # abs data to make averaging operations cumulative -> more effect as positive and negative values do not cancel each
     downsampled_audio, downsampled_rate = resample_audio(4, np.abs(audio_data), sample_rate)
 
-    selected_loud_samples_indices, _ = np.where(np.abs(downsampled_audio) >= 0.1)
+    # selected_loud_samples_indices, _ = np.where(np.abs(downsampled_audio) >= 0.1)
 
     downsampled_audio[downsampled_audio >= 0.1] = 1.0
     downsampled_audio[downsampled_audio < 0.1] = 0.0

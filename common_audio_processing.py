@@ -1,5 +1,6 @@
 
 import math
+import os
 import re
 from typing import Any
 import numpy as np
@@ -7,6 +8,7 @@ from scipy import ndimage
 from scipy.io import wavfile
 
 from ffmpeg_processing import extract_audio_from_video
+from path_util import get_extracted_audio_path
 
 
 video_matcher_regex = re.compile(".+\.[mp4|mov|mkv|avi|webm|m4a]")
@@ -92,6 +94,11 @@ def read_audio_of_files(file_paths):
         sample_rates_list.append(sample_rate)
 
     return audio_data_list, sample_rates_list
+
+
+def delete_video_extracted_audio(video_file_path: str):
+    audio_file_path = get_extracted_audio_path(video_file_path)
+    os.path.unlink(audio_file_path)
 
 
 def resample_audio(target_sample_width_sec, audio_data, sample_rate):
