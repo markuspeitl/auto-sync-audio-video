@@ -142,6 +142,12 @@ def pull_thumbnail_at_sec(video_file_path: str, target_thumbnail_path: str, seco
 
 def pull_video_thumbnail_samples(video_file_path: str, thumbnail_cnt: int, clean_dir=False):
 
+    if (thumbnail_cnt <= 0):
+        return None
+
+    if (not os.path.exists(video_file_path)):
+        raise Exception(f"{video_file_path} does not exist -> can not create thumbnails of video")
+
     video_duration = get_media_duration(video_file_path)
 
     thumbnail_sec_timepoints = np.linspace(0.5, video_duration - 0.5, thumbnail_cnt).tolist()

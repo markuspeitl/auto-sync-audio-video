@@ -5,3 +5,4 @@ ide-were-were*
 thumbnails
 *.pyc
 *.log
+__pycache__
