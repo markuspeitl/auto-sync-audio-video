@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 from common_audio_processing import apply_audio_differentiation, delete_video_extracted_audio, read_audio_of_file, resample_audio
 from path_util import get_extracted_audio_path
-from time_conversion_util import sample_index_to_timestamp, sec_to_samples
+from time_conversion_util import print_sample_range_timestamps, sample_index_to_timestamp, sample_range_to_timestamps, sec_to_samples
 
 
 def merge_range_with_next_recursive(index, tuple_ranges, close_gap_threshold=1):
@@ -138,22 +138,6 @@ def refine_range_towards_valleys(range_tuple: tuple, audio_data_samples: np.arra
     start_valley_index = find_valley_index(audio_data_samples, range_tuple[0], direction=-1, valley_threshold=valley_thresholds[0])
     end_valley_index = find_valley_index(audio_data_samples, range_tuple[1], direction=1, valley_threshold=valley_thresholds[1])
     return (start_valley_index, end_valley_index)
-
-
-def sample_range_to_timestamps(sample_range_tuple: tuple, sample_rate: float):
-    start_timestamp = sample_index_to_timestamp(sample_range_tuple[0], sample_rate)
-    end_timestamp = sample_index_to_timestamp(sample_range_tuple[1], sample_rate)
-
-    return (start_timestamp, end_timestamp)
-
-
-def print_sample_range_timestamps(sample_range_tuple: tuple, sample_rate: float):
-    print(sample_range_tuple)
-
-    sample_range_timestamps = sample_range_to_timestamps(sample_range_tuple, sample_rate)
-
-    print(sample_range_timestamps[0])
-    print(sample_range_timestamps[0])
 
 
 def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: tuple[float], sample_rate: float):

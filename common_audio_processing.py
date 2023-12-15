@@ -7,7 +7,7 @@ import numpy as np
 from scipy import ndimage
 from scipy.io import wavfile
 
-from ffmpeg_processing import extract_audio_from_video
+from ffmpeg_processing import extract_audio_from_video, read_audio_ffmpeg
 from path_util import get_extracted_audio_path
 
 
@@ -64,11 +64,23 @@ def apply_audio_differentiation(audio_sample_data):
 def read_audio_of_file(file_path):
     global audio_file_cache
 
-    audio_file_path = None
-    if (file_path.endswith('.wav')):
+    # audio_file_path = None
+
+    # Cache loaded audio files
+    if (file_path in audio_file_cache):
+        return audio_file_cache[file_path][0], audio_file_cache[file_path][1]
+
+    sample_rate, audio_data = read_audio_ffmpeg(file_path)
+    audio_file_cache[file_path] = (sample_rate, audio_data)
+    return sample_rate, audio_data
+
+    """if (file_path.endswith('.wav')):
         audio_file_path = file_path
 
     elif (video_matcher_regex.match(file_path)):
+
+        read_audio_from_video
+
         audio_file_path = extract_audio_from_video(file_path)
 
     # Cache loaded audio files
@@ -79,7 +91,7 @@ def read_audio_of_file(file_path):
 
     audio_file_cache[audio_file_path] = (sample_rate, audio_data)
 
-    return sample_rate, audio_data
+    return sample_rate, audio_data"""
 
 
 def read_audio_of_files(file_paths):
@@ -97,8 +109,15 @@ def read_audio_of_files(file_paths):
 
 
 def delete_video_extracted_audio(video_file_path: str):
+
+    if (not video_file_path or not os.path.exists(video_file_path)):
+        return
+
     audio_file_path = get_extracted_audio_path(video_file_path)
-    os.path.unlink(audio_file_path)
+    if (not audio_file_path or not os.path.exists(audio_file_path)):
+        return
+
+    os.unlink(audio_file_path)
 
 
 def resample_audio(target_sample_width_sec, audio_data, sample_rate):

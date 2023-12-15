@@ -87,10 +87,10 @@ def main():
         # TODO song range timestamps have to consider the offset as we are truncating the output of the synced merge
         # args.on_range_timestamps = ('00:03:33.000', '00:09:24.000')
         # args.remux_sync_offset_msec = -3652
-        remuxed_video_file_path = remux_video_audio_with_offset(video_file_path, processed_audio_file_path, args.remux_sync_offset_msec, args.on_range_timestamps, args)
+        remuxed_video_file_path = remux_video_audio_with_offset(video_file_path, processed_audio_file_path, args.remux_sync_offset_msec, args.on_range_timestamps)
 
         if (not args.keep_transient_files and processed_audio_file_path != audio_file_path):
-            os.path.unlink(processed_audio_file_path)
+            os.unlink(processed_audio_file_path)
 
     if (args.extract_thumbnails_count > 0):
         # remuxed_video_file_path = "20231204_204607_remuxed.mkv"

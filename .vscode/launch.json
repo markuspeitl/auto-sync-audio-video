@@ -22,11 +22,22 @@
       }
     },
     {
-      "name": "Python: detect_audio_claps.py",
+      "name": "Python: sync_remux_process_video_audio.py",
       "type": "python",
       "request": "launch",
-      "program": "${workspaceFolder}/detect_audio_claps.py",
+      "program": "${workspaceFolder}/sync_remux_process_video_audio.py",
       "args": [
+      ]
+    },
+    {
+      "name": "Python: minha-estrella-guia sync_remux_process_video_audio.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/sync_remux_process_video_audio.py",
+      "args": [
+        "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/20231204_222341.mp4",
+        "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/230412_0079S12.wav",
+        //"--keep_transient_files"
       ]
     }
   ]

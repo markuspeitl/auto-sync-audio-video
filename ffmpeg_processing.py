@@ -10,6 +10,9 @@ import numpy as np
 from path_util import add_name_suffix_path, get_extracted_audio_path
 from time_conversion_util import msec_to_timestamp, sec_to_timestamp
 
+# import ffmpegio_plugin_numpy
+# pip3 install ffmpegio
+import ffmpegio
 
 ffmpeg_binary_location = "ffmpeg"
 ffprobe_binary_location = "ffprobe"
@@ -27,6 +30,11 @@ def extract_audio_from_video(video_path):
         os.system(f"{ffmpeg_binary_location} -i {video_path} -n -vn -acodec {video_extracted_audio_codec} {extracted_audio_path}")
 
     return extracted_audio_path
+
+
+def read_audio_ffmpeg(video_path) -> (float, np.ndarray):
+    sample_rate, audio_data = ffmpegio.audio.read(video_path)
+    return sample_rate, audio_data
 
 
 def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset_msec, output_range_timestamps: tuple):

@@ -73,3 +73,19 @@ def sample_index_to_timestamp(sample_index, sample_rate):
     time_at_sample_sec = time_per_sample_frame_sec * sample_index
 
     return sec_to_timestamp(time_at_sample_sec)
+
+
+def sample_range_to_timestamps(sample_range_tuple: tuple, sample_rate: float):
+    start_timestamp = sample_index_to_timestamp(sample_range_tuple[0], sample_rate)
+    end_timestamp = sample_index_to_timestamp(sample_range_tuple[1], sample_rate)
+
+    return (start_timestamp, end_timestamp)
+
+
+def print_sample_range_timestamps(sample_range_tuple: tuple, sample_rate: float):
+    print(sample_range_tuple)
+
+    sample_range_timestamps = sample_range_to_timestamps(sample_range_tuple, sample_rate)
+
+    print(sample_range_timestamps[0])
+    print(sample_range_timestamps[1])
