@@ -1,0 +1,5 @@
+/mnt/CRU1TB/recordingprojects/ide-were-were/230412_0072S12.wav	230412_0072S12_reaper_processed.wav
+<CONFIG
+    NORMALIZE	2 -3.0
+	FXCHAIN		/home/pmarkus/.config/REAPER/FXChains/guitar-mix.RfxChain
+>

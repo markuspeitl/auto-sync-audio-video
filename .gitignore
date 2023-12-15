@@ -3,3 +3,5 @@ ide-were-were*
 *.mp4
 *_remuxed.mkv
 thumbnails
+*.pyc
+*.log

@@ -9,18 +9,9 @@
 
 import sys
 from pathlib import PurePath
-from os.path import join
 import speech_recognition as sr
 
-
-def add_name_suffix_path(path, suffix, new_extension=None):
-    path_obj = PurePath(path)
-
-    extension = path_obj.suffix
-    if (new_extension):
-        extension = new_extension
-
-    return join(path_obj.parent, path_obj.stem + suffix + extension)
+from path_util import add_name_suffix_path
 
 
 def transcribe_audio_file(audio_file_path):
