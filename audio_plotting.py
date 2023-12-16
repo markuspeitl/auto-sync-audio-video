@@ -9,7 +9,8 @@ from time_conversion_util import sec_to_timestamp
 def sec_to_timestamp_format(x, pos):
     return time.strftime('%M:%S', time.gmtime(x))
 
-def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sample_rate: float, fill_down=False):
+
+def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sample_rate: float, marker_indices: list[int] = [], marked_ranges: list[tuple[int]] = [], fill_down=False):
 
     data_sample_length = data.shape[0]
 
@@ -50,41 +51,48 @@ def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sampl
 
     # label of x-axis
     subplot_ax.set_xlabel("Time (seconds)")
-    #plt.xlabel("Time (seconds)")
+    subplot_ax.set_xlim(0, data_sample_length / sample_rate)
+    # plt.xlabel("Time (seconds)")
 
     # plt.xticks(time, time_labels)
-    subplot_ax.set_xticks()
-    #plt.xticks()
+    # subplot_ax.set_xticks()
+    # plt.xticks()
 
     # plt.grid()
-    #plt.grid(which='major', linestyle='-', linewidth='1', color='black')
-    #plt.grid(which='minor', linestyle='-', linewidth='0.2', color='gray')
+    # plt.grid(which='major', linestyle='-', linewidth='1', color='black')
+    # plt.grid(which='minor', linestyle='-', linewidth='0.2', color='gray')
 
     subplot_ax.grid(which='major', linestyle='-', linewidth='1', color='black')
     subplot_ax.grid(which='minor', linestyle='-', linewidth='0.2', color='gray')
     # plt.grid(which='both', color='0.65', linestyle='-')
 
     subplot_ax.minorticks_on()
-    #plt.minorticks_on()
+    # plt.minorticks_on()
     # Needs to be after minor ticks on to adjust number of minor ticks
     subplot_ax.xaxis.set_minor_locator(ticker.AutoMinorLocator(6))
-    
 
     # actual plotting
-    #plt.plot(timeline_data, audio_channel_data)
-    subplot_ax.plot(timeline_data, data)
+    # plt.plot(timeline_data, audio_channel_data)
+    subplot_ax.plot(timeline_data, data, '-gD', marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
+    # subplot_ax.bar(timeline_data, data)
+    # subplot_ax.stem(timeline_data, data, '-gD', marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
+
+    if (marked_ranges and len(marked_ranges) > 0):
+        for marked_range in marked_ranges:
+            subplot_ax.axvspan(marked_range[0], marked_range[1], color='green', alpha=0.4)
 
     if (fill_down):
-        #plt.fill_between(timeline_data, audio_channel_data, color='blue', alpha=0.3)
+        # plt.fill_between(timeline_data, audio_channel_data, color='blue', alpha=0.3)
         subplot_ax.fill_between(timeline_data, data, color='blue', alpha=0.3)
 
-def show_waveforms(audio_data, sample_rate, fill_down=False):
+
+def show_waveforms(audio_data: np.ndarray, sample_rate: float, marker_indices: list[int] = [], marked_ranges: list[tuple[int]] = [], fill_down=False, block=True):
 
     data_sample_length = audio_data.shape[0]
     audio_channels_count = audio_data.shape[1]
 
-    plt.rcParams["figure.figsize"] = (16, 12)
-    figure, subplot_axs: list[Axes] = plt.subplots(audio_channels_count)
+    plt.rcParams["figure.figsize"] = (16, 10)
+    figure, subplot_axs = plt.subplots(audio_channels_count)
 
     figure.suptitle("Audio channel waves")
 
@@ -92,8 +100,10 @@ def show_waveforms(audio_data, sample_rate, fill_down=False):
 
         audio_channel_data = audio_data[:, audio_channel_index]
         subplot_ax: Axes = subplot_axs[audio_channel_index]
-        plot_timeline_data(f'Channel {audio_channel_index}', subplot_ax, audio_channel_data, sample_rate, fill_down=fill_down)
+        plot_timeline_data(f'Channel {audio_channel_index}', subplot_ax, audio_channel_data, sample_rate, marker_indices, marked_ranges, fill_down=fill_down)
 
     # shows the plot
     # in new window
-    plt.show(block=True)
+    plt.show(block=block)
+
+    print("Closed window")
