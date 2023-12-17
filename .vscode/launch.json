@@ -44,6 +44,21 @@
         "0.01"
         //"--keep_transient_files"
       ]
+    },
+    {
+      "name": "Python: minha-estrella-guia apply_reaper_fx_chain.py",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/apply_reaper_fx_chain.py",
+      "args": [
+        "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/20231204_222341.mp4",
+        "--fx_chain",
+        "guitar-mix",
+        "--render_codec",
+        "flac_24",
+        "--play_on_finish_binary",
+        "mpv",
+      ]
     }
   ]
 }

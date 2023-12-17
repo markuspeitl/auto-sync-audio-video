@@ -5,7 +5,7 @@ import sys
 import numpy as np
 from os.path import dirname, join
 import matplotlib.pyplot as plt
-from apply_reaper_fx_chain import apply_audio_processing_chain
+from apply_reaper_fx_chain import apply_audio_fx_chains, apply_audio_processing_chain
 from audio_activity_range_detection import detect_song_time_range
 from audio_impulse_detection import find_remux_sync_offset_msec
 from ffmpeg_processing import pull_video_thumbnail_samples, remux_video_audio_with_offset
@@ -80,7 +80,7 @@ def main():
 
     if (not args.disable_effects_chain):
         # male-voice-mix, warmness-booster-effects
-        processed_audio_file_path = apply_audio_processing_chain(audio_file_path, args.audio_effects_chain)
+        processed_audio_file_path = apply_audio_fx_chains([audio_file_path], [args.audio_effects_chain])
 
     if (not args.disable_video_remuxing):
 
