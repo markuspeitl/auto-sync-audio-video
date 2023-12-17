@@ -159,18 +159,42 @@ def get_fx_chain_path_from_identifier(chain_identifier: str):
     return fx_chain_path
 
 
-def apply_audio_fx_chains(source_audio_paths: list[str], fx_chain_paths: list[str], target_audio_paths: list[str] = [], options: dict[str, Any] = None):
+def perform_batch_processing(batch_file_target_path: str, fx_chain: str, source_audio_paths: str, target_audio_paths: str, normalization_mode: NormalizeModes, normalization_level: float, render_codec: str, reaper_binary_location: str):
+    fx_chain_path = get_fx_chain_path_from_identifier(fx_chain)
 
-    normalization_mode = get_option_or_default('normalize_mode', default_output_norm_mode, options.__dict__)
-    normalization_level = get_option_or_default('normalize_level', default_output_norm_level, options.__dict__)
-    reaper_binary_location = get_option_or_default('reaper_binary_location', default_reaper_binary_location, options.__dict__)
-    batch_list_target_dir = get_option_or_default('batch_list_target_dir', default_reaper_batch_list_target_dir, options.__dict__)
+    if (os.path.exists(batch_file_target_path)):
+        os.unlink(batch_file_target_path)
+
+    with open(batch_file_target_path, 'w+') as batch_file:
+
+        batch_processing_file_content = get_batch_processing_file_content(source_audio_paths, target_audio_paths, fx_chain_path, normalization_mode.value, normalization_level, render_codec)
+
+        batch_file.write(batch_processing_file_content)
+        batch_file.flush()
+
+    os.system(f"{reaper_binary_location} -batchconvert {batch_file_target_path}")
+
+    if (os.path.exists(batch_file_target_path)):
+        os.unlink(batch_file_target_path)
+    if (os.path.exists(batch_file_target_path + ".log")):
+        os.unlink(batch_file_target_path + ".log")
+
+    return target_audio_paths
+
+
+# Process multiple files multiple times, applying the fx chains in series (one after the other on the output of the last stage)
+def apply_audio_fx_chains(source_audio_paths: list[str], fx_chain_paths: list[str], target_audio_paths: list[str] = [], options: dict[str, Any] = None):
 
     if (not target_audio_paths):
         target_audio_paths = []
 
     if (not fx_chain_paths):
         fx_chain_paths = [default_fx_chain_path]
+
+    normalization_mode = get_option_or_default('normalize_mode', default_output_norm_mode, options.__dict__)
+    normalization_level = get_option_or_default('normalize_level', default_output_norm_level, options.__dict__)
+    reaper_binary_location = get_option_or_default('reaper_binary_location', default_reaper_binary_location, options.__dict__)
+    batch_list_target_dir = get_option_or_default('batch_list_target_dir', default_reaper_batch_list_target_dir, options.__dict__)
 
     if (len(target_audio_paths) > 0 and len(source_audio_paths) != len(target_audio_paths)):
         raise Exception("Invalid input dimensions, lengths of audio_file_paths and target_audio_file_paths do not match, either omit the target_audio_file_paths parameter or make sure they have the same dimensions")
@@ -183,28 +207,9 @@ def apply_audio_fx_chains(source_audio_paths: list[str], fx_chain_paths: list[st
     first_source_name = PurePath(source_audio_paths[0]).stem
     batch_processing_definition_path = join(batch_list_target_dir, first_source_name + reaper_batch_file_suffix)
 
-    if (os.path.exists(batch_processing_definition_path)):
-        os.unlink(batch_processing_definition_path)
-
     for fx_chain_path in fx_chain_paths:
-
-        fx_chain_path = get_fx_chain_path_from_identifier(fx_chain_path)
-
-        with open(batch_processing_definition_path, 'w+') as batch_file:
-
-            batch_processing_file_content = get_batch_processing_file_content(source_audio_paths, target_audio_paths, fx_chain_path, normalization_mode.value, normalization_level, options.render_codec)
-
-            batch_file.write(batch_processing_file_content)
-            batch_file.flush()
-
-        os.system(f"{reaper_binary_location} -batchconvert {batch_processing_definition_path}")
-
-        if (os.path.exists(batch_processing_definition_path)):
-            os.unlink(batch_processing_definition_path)
-        if (os.path.exists(batch_processing_definition_path + ".log")):
-            os.unlink(batch_processing_definition_path + ".log")
-
-        source_audio_paths = target_audio_paths
+        processed_audio_paths: list[str] = perform_batch_processing(batch_processing_definition_path, fx_chain_path, source_audio_paths, target_audio_paths, normalization_mode, normalization_level, options.render_codec, reaper_binary_location)
+        source_audio_paths = processed_audio_paths
 
     return target_audio_paths
 
@@ -218,6 +223,25 @@ def apply_audio_fx_chains_single(source_audio_path: str, fx_chain_paths: list[st
 
 def apply_fx_chain_to_single(source_audio_path: str, fx_chain_path: str, target_audio_path: str = None, options: dict[str, Any] = None):
     apply_audio_fx_chains_single(source_audio_path, [fx_chain_path], target_audio_path, options)
+
+
+# Process passed files multiple times, each time with a different fx_chain
+def render_fx_candidates(source_audio_paths: list[str], fx_chain_paths: list[str], options: dict[str, Any] = None):
+
+    fx_chain_to_output_paths: dict[str, list[str]] = {}
+
+    for fx_chain_path in fx_chain_paths:
+
+        fx_chain_path_obj = PurePath(fx_chain_path)
+        fx_chain_id = fx_chain_path_obj.stem
+
+        target_audio_paths: list[str] = list(map(lambda source_audio_path: add_name_suffix_path(source_audio_path, '_' + fx_chain_id), source_audio_paths))
+
+        processed_audio_paths = apply_audio_fx_chains(source_audio_paths, [fx_chain_path], target_audio_paths, options)
+
+        fx_chain_to_output_paths[fx_chain_id] = processed_audio_paths
+
+    return fx_chain_to_output_paths
 
 
 def main():
@@ -235,20 +259,30 @@ def main():
     parser.add_argument('-nl', '--normalize_level', type=float, help="Audio output normalization level in dB [-inf, -0.0] dB", default=default_output_norm_level)
 
     parser.add_argument('-p', '--play_on_finish_binary', '--play_bin', help="Use this application to play back the processed audio, when the fx chains have been applied")
+    parser.add_argument('-mult', '--multi_fx_candidates', '--mult_candidates', action="store_true", help="Render one output candidate for each specified fx_chain per input file, instead of applying all fx_chains on the same input file")
 
     # Compability patching options (adapting to uncommon configurations)
     parser.add_argument('-reaper', '--reaper_binary_location', help="Location of the reaper binary to process the audio batch with", default=default_reaper_binary_location)
     parser.add_argument('-batch_dir', '--batch_list_target_dir', help="Location of the directory to store the reaper batch file in, which is needed to run the processing when calling reaper binary", default=default_reaper_batch_list_target_dir)
 
     args: argparse.Namespace = parser.parse_args()
-    processed_audio_file_paths = apply_audio_fx_chains(args.source_audio_paths, args.audio_effect_chains, args.target_audio_paths, options=args)
 
-    if (args.play_on_finish_binary):
-        processed_audio_files_line_list = " ".join(processed_audio_file_paths)
-        os.system(f"{args.play_on_finish_binary} {processed_audio_files_line_list}")
+    if (args.multi_fx_candidates):
+        if (args.target_audio_paths and len(args.target_audio_paths) > 0):
+            raise Exception("'--target_audio_paths' option is not allowed when '--multi_fx_candidates' is enabled")
 
-    processed_audio_files_list = "\n".join(processed_audio_file_paths)
-    print(processed_audio_files_list)
+        fx_chain_to_output_paths = render_fx_candidates(args.source_audio_paths, args.audio_effect_chains, options=args.__dict__)
+        print(fx_chain_to_output_paths)
+    else:
+
+        processed_audio_file_paths = apply_audio_fx_chains(args.source_audio_paths, args.audio_effect_chains, args.target_audio_paths, options=args.__dict__)
+
+        if (args.play_on_finish_binary):
+            processed_audio_files_line_list = " ".join(processed_audio_file_paths)
+            os.system(f"{args.play_on_finish_binary} {processed_audio_files_line_list}")
+
+        processed_audio_files_list = "\n".join(processed_audio_file_paths)
+        print(processed_audio_files_list)
 
 
 if __name__ == '__main__':

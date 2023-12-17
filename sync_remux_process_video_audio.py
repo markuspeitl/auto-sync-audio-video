@@ -65,6 +65,21 @@ def main():
     if (args.on_range_timestamps and len(args.on_range_timestamps) > 2):
         raise Exception("--on_range can not have more than 2 timestamps: one for start and one for end")
 
+    # TODO
+    # 1. Detect Impulses, Sync, remux
+    # 2. Detect Activity Range (on remuxed video), truncate/trim
+    # 3. Apply audio fx on the audio stream (of the video) and then remux
+    # 4. Pull thumbnails
+    # 5. Transcribe audio
+    # 6. Pull images (use some of the transcription for stable diffusion, or use thumbnails for sd, do an image search with keywords)
+    # 7. Upload to youtube
+    # 8. Open upload page
+
+    # Requires a bit more time -> 2x remux, but makes the stages stand on their own (manual intervention in single steps becomes possible)
+    # Here: 'Syncing' is mostly solid, 'Detect Activity Range' might need manual parameter tuning, 'Apply fx' does not require tunable parameters
+
+    # TODO Ram mode -> put temporary files on /dev/shm
+
     video_file_path = args.video_src_path
     audio_file_path = args.audio_src_path
     # video_file_path = "20231204_204607.mp4"
