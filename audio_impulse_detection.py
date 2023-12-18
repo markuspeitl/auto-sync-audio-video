@@ -1,13 +1,34 @@
 from typing import Any
 import numpy as np
-from common_audio_processing import apply_audio_differentiation, delete_video_extracted_audio, read_audio_of_files
-from time_conversion_util import msec_to_samples, msec_to_timestamp, sample_index_to_timestamp, samples_to_msec
+from audio_plotting import show_waveforms
+from common_audio_processing import apply_audio_differentiation, normalize_symmetrical_float, read_audio_of_files
+from time_conversion_util import sample_index_to_timestamp, sec_to_sample_index
+
+# Release delay/time of impulse detection
 
 
-def extract_clap_sample_indices(audio_wav_data, sample_rate, detection_threshold: float, detect_release_time_msec=100):
+def filter_close_samples(sample_indices, window_size_samples):
+
+    filtered_indices = []
+
+    last_sample_index = - window_size_samples
+    for sample_index in sample_indices:
+        if (last_sample_index + window_size_samples <= sample_index):
+            filtered_indices.append(sample_index)
+            last_sample_index = sample_index
+
+    return filtered_indices
+
+
+def extract_impulse_sample_indices(audio_data: np.ndarray, sample_rate: float, impulse_ramp_threshold: float = 0.4, detect_release_threshold_sec: float = 0.1, show_plots: bool = False):
+
+    audio_channel = audio_data
+    if (audio_data.shape[1] > 1):
+        audio_channel = audio_data[:, 0]
 
     # We are focused on the speed of the change for detecting a short impulse
-    audio_amplitude_sobel = apply_audio_differentiation(audio_wav_data)
+    audio_amplitude_sobel = apply_audio_differentiation(audio_channel)
+    audio_amplitude_sobel = normalize_symmetrical_float(audio_amplitude_sobel)
 
     # audio_sample_bit_depth: int = 32
     # audio_sample_bit_depth: int = np.iinfo(original_data.dtype).max
@@ -19,27 +40,21 @@ def extract_clap_sample_indices(audio_wav_data, sample_rate, detection_threshold
     # print(len(selected_key_samples_indices))
     # print(selected_key_samples_indices)
 
-    selected_key_samples_indices, _ = np.where(audio_amplitude_sobel >= detection_threshold)
-
-    # Release delay/time of impulse detection
-    def filter_close_samples(sample_indices, window_size_samples):
-
-        filtered_indices = []
-
-        last_sample_index = - window_size_samples
-        for sample_index in sample_indices:
-            if (last_sample_index + window_size_samples <= sample_index):
-                filtered_indices.append(sample_index)
-                last_sample_index = sample_index
-
-        return filtered_indices
+    selected_key_samples_indices = np.where(audio_amplitude_sobel >= impulse_ramp_threshold)[0]
 
     # print(len(selected_key_samples_indices))
     # print(selected_key_samples_indices)
 
-    filter_window_size_samples = msec_to_samples(detect_release_time_msec, sample_rate)
+    filter_window_sample_indices_width = sec_to_sample_index(detect_release_threshold_sec, sample_rate)
+    selected_key_samples_indices = filter_close_samples(selected_key_samples_indices, filter_window_sample_indices_width)
 
-    selected_key_samples_indices = filter_close_samples(selected_key_samples_indices, filter_window_size_samples)
+    if (show_plots):
+
+        normalized_audio_data = normalize_symmetrical_float(audio_channel)
+        show_waveforms(normalized_audio_data, sample_rate, marker_indices=selected_key_samples_indices, fill_down=False, block=False)
+        # plotting_audio = np.concatenate(downsampled_audio, downsampled_audio_fine)
+        show_waveforms(audio_amplitude_sobel, sample_rate, marker_indices=selected_key_samples_indices, fill_down=False, block=True)
+        # show_waveforms(downsampled_audio_fine, downsampled_rate_fine, marker_indices=fine_rough_song_range, marked_ranges=[final_song_range], fill_down=True, block=False)
 
     # detected_timestamps: list[str] = list(map(lambda detected_sample_index: sample_index_to_time(detected_sample_index, sample_rate), selected_key_samples_indices))
 
@@ -49,9 +64,9 @@ def extract_clap_sample_indices(audio_wav_data, sample_rate, detection_threshold
     return selected_key_samples_indices
 
 
-def extract_clap_timestamps(audio_wav_data, sample_rate, detection_threshold: float, detect_release_time_msec=100):
+def extract_impulse_timestamps(audio_wav_data, sample_rate, impulse_ramp_threshold: float = 0.4, detect_release_threshold_sec: float = 0.1, show_plots: bool = False):
 
-    selected_key_samples_indices = extract_clap_sample_indices(audio_wav_data, sample_rate, detection_threshold, detect_release_time_msec)
+    selected_key_samples_indices = extract_impulse_sample_indices(audio_wav_data, sample_rate, impulse_ramp_threshold, detect_release_threshold_sec, show_plots)
 
     detected_timestamps: list[str] = list(map(lambda detected_sample_index: sample_index_to_timestamp(detected_sample_index, sample_rate), selected_key_samples_indices))
 
@@ -61,51 +76,15 @@ def extract_clap_timestamps(audio_wav_data, sample_rate, detection_threshold: fl
     return detected_timestamps
 
 
-def find_sync_offset(reference_first_sample_time_msec, clap_sample_indices: list[int], sample_rate: int):
-
-    selected_first_sample_time_msec = samples_to_msec(clap_sample_indices[0], sample_rate)
-    first_clap_offset_msec = reference_first_sample_time_msec - selected_first_sample_time_msec
-    return first_clap_offset_msec
-
-
-def find_sync_offsets(claps_per_file_list: list[list[int]], sample_rates_list: list[int]):
-
-    reference_file_clap_samples = claps_per_file_list[0]
-    reference_first_sample_time_msec = samples_to_msec(reference_file_clap_samples[0], sample_rates_list[0])
-
-    sync_offsets_msec = []
-
-    for clap_samples, file_sample_rate in zip(claps_per_file_list[1:], sample_rates_list[1:]):
-        sync_offsets_msec.append(find_sync_offset(reference_first_sample_time_msec, clap_samples, file_sample_rate))
-
-    return sync_offsets_msec
-
-
-def extract_clap_indices_of_files(file_paths):
+def extract_impulse_indices_of_files(file_paths, impulse_ramp_threshold: float = 0.4, detect_release_threshold_sec: float = 0.1, show_plots: bool = False):
 
     audio_data_list, sample_rates_list = read_audio_of_files(file_paths)
 
-    claps_per_file_list = []
+    impulses_per_file_list = []
 
-    detection_threshold = 0.5
     for audio_data, sample_rate in zip(audio_data_list, sample_rates_list):
-        detected_clap_sample_indices = extract_clap_sample_indices(audio_data, sample_rate, detection_threshold, detect_release_time_msec=100)
-        claps_per_file_list.append(detected_clap_sample_indices)
+        detected_impulse_sample_indices = extract_impulse_sample_indices(audio_data, sample_rate, impulse_ramp_threshold, detect_release_threshold_sec, show_plots)
+        impulses_per_file_list.append(detected_impulse_sample_indices)
         sample_rates_list.append(sample_rate)
 
-    return claps_per_file_list, sample_rates_list
-
-
-def find_remux_sync_offset_msec(audio_file_path: str, video_file_path: str, options: dict[str, Any]):
-
-    claps_per_file_list, sample_rates_list = extract_clap_indices_of_files([audio_file_path, video_file_path])
-
-    sync_offsets_msec = find_sync_offsets(claps_per_file_list, sample_rates_list)
-
-    print(f"sync_offset_msec = {sync_offsets_msec[0]}")
-    print(f"sync_offset_timestamp = {msec_to_timestamp(sync_offsets_msec[0])}")
-
-    if (not options.keep_transient_files):
-        delete_video_extracted_audio(video_file_path)
-
-    return sync_offsets_msec[0]
+    return impulses_per_file_list, sample_rates_list

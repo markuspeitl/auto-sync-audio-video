@@ -2,7 +2,7 @@
 import math
 import os
 import re
-from typing import Any
+from typing import Any, Callable
 import numpy as np
 from scipy import ndimage
 from scipy.io import wavfile
@@ -15,14 +15,71 @@ video_matcher_regex = re.compile(".+\.[mp4|mov|mkv|avi|webm|m4a]")
 audio_file_cache: dict[str, Any] = {}
 
 
-def normalize_to_float(data):
+def convert_dtype(data: np.ndarray, dtype=np.float32):
+    if (data.dtype != dtype):
+        return np.asarray(data, dtype=dtype)
+    return data
+
+
+"""def normalize_to_float(data: np.ndarray, dtype=np.float32):
 
     # max_numpy_array_int_value = np.iinfo(data.dtype).max - np.iinfo(data.dtype).min
     # print(max_numpy_array_int_value)
-    max_data_value = np.max(data)
-    min_data_value = np.min(data)
 
-    return np.asarray(((data - min_data_value) / (max_data_value - min_data_value)), dtype=np.float64)
+    float_data = convert_dtype(data, dtype)
+
+    max_data_value = np.max(float_data)
+    min_data_value = np.min(float_data)
+    # scale symmetrical, by which max has less headroom
+
+    # return (float_data - min_data_value) / (max_data_value - min_data_value)
+"""
+
+
+def normalize_per_channel(normalize_function: Callable, data: np.ndarray, dtype=np.float32):
+    if (len(data.shape) > 1):
+        for audio_channel_index in range(0, data.shape):
+            data[audio_channel_index] = normalize_function(data[audio_channel_index], dtype=dtype)
+
+    return normalize_function(data, dtype=dtype)
+
+
+def normalize_to_interval(data: np.ndarray, interval: tuple[float] = (0, 1), dtype=np.float32):
+    float_data = convert_dtype(data, dtype)
+
+    max_data_value = np.max(float_data)
+    min_data_value = np.min(float_data)
+
+    interval_size = interval[1] - interval[0]
+    zero_to_one_scaled = (float_data - min_data_value) / (max_data_value - min_data_value)
+
+    if (interval == (0, 1)):
+        return zero_to_one_scaled
+
+    # Example (-1, 3) -> size = 4 -> scale to (0,4) and shift -1
+    # 0.0 -> -1.0
+    # 1.0 -> 3.0
+    # 0.5 -> 1
+
+    return (zero_to_one_scaled * interval_size) - interval[0]
+
+
+def normalize_symmetrical_float(data: np.ndarray, dtype=np.float32):
+    # max_numpy_array_int_value = np.iinfo(data.dtype).max - np.iinfo(data.dtype).min
+    # print(max_numpy_array_int_value)
+
+    float_data = convert_dtype(data, dtype)
+
+    max_data_value = np.max(float_data)
+    min_data_value = np.min(float_data)
+    min_data_value_abs = np.abs(np.min(float_data))
+
+    biggest_max_value = max(max_data_value, min_data_value_abs)
+    return float_data / biggest_max_value
+
+    # scale symmetrical, by which max has less headroom
+
+    # return ((float_data - min_data_value) / (max_data_value - min_data_value) - 0.5) * 2
 
 
 def downsample_audio(audio_np_array, downsample_block_size, sample_rate):
@@ -54,7 +111,7 @@ def downsample_audio(audio_np_array, downsample_block_size, sample_rate):
 
 def apply_audio_differentiation(audio_sample_data):
 
-    float_wav_array = normalize_to_float(audio_sample_data)
+    float_wav_array = normalize_symmetrical_float(audio_sample_data)
     # We are focused on the speed of the change for detecting a short impulse
     # audio_amplitude_sobel = normalize_to_float(ndimage.sobel(float_wav_array, axis=0))
     audio_amplitude_sobel = ndimage.sobel(float_wav_array, axis=0)

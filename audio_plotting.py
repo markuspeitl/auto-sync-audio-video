@@ -1,3 +1,4 @@
+from collections.abc import Iterable
 import time
 from matplotlib import pyplot as plt, ticker
 from matplotlib.axes import Axes
@@ -73,7 +74,7 @@ def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sampl
 
     # actual plotting
     # plt.plot(timeline_data, audio_channel_data)
-    subplot_ax.plot(timeline_data, data, '-gD', marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
+    subplot_ax.plot(timeline_data, data, marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
     # subplot_ax.bar(timeline_data, data)
     # subplot_ax.stem(timeline_data, data, '-gD', marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
 
@@ -86,10 +87,21 @@ def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sampl
         subplot_ax.fill_between(timeline_data, data, color='blue', alpha=0.3)
 
 
+def get_audio_channel(channel_index: int, audio_data: np.ndarray):
+
+    if (len(audio_data.shape) <= 1):
+        return audio_data
+
+    return audio_data[:, channel_index]
+
+
 def show_waveforms(audio_data: np.ndarray, sample_rate: float, marker_indices: list[int] = [], marked_ranges: list[tuple[int]] = [], fill_down=False, block=True):
 
     data_sample_length = audio_data.shape[0]
-    audio_channels_count = audio_data.shape[1]
+
+    audio_channels_count = 1
+    if (len(audio_data.shape) > 1):
+        audio_channels_count = audio_data.shape[1]
 
     plt.rcParams["figure.figsize"] = (16, 10)
     figure, subplot_axs = plt.subplots(audio_channels_count)
@@ -98,8 +110,13 @@ def show_waveforms(audio_data: np.ndarray, sample_rate: float, marker_indices: l
 
     for audio_channel_index in range(0, audio_channels_count):
 
-        audio_channel_data = audio_data[:, audio_channel_index]
-        subplot_ax: Axes = subplot_axs[audio_channel_index]
+        audio_channel_data = get_audio_channel(audio_channel_index, audio_data)
+
+        if (isinstance(subplot_axs, Iterable)):
+            subplot_ax: Axes = subplot_axs[audio_channel_index]
+        else:
+            subplot_ax = subplot_axs
+
         plot_timeline_data(f'Channel {audio_channel_index}', subplot_ax, audio_channel_data, sample_rate, marker_indices, marked_ranges, fill_down=fill_down)
 
     # shows the plot

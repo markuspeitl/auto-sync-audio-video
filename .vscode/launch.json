@@ -59,6 +59,20 @@
         "--play_on_finish_binary",
         "mpv",
       ]
+    },
+    {
+      "name": "audio_sync_offset_calc.py 20231204_204607.mp4 230412_0072S12.wav",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/audio_sync_offset_calc.py",
+      "args": [
+        "--impulse_ramp_threshold",
+        "0.5",
+        "--show_plot",
+        "20231204_204607.mp4",
+        "230412_0072S12.wav",
+        //"230412_0072S34D09.wav",
+      ]
     }
   ]
 }

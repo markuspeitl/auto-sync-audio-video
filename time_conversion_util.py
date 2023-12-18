@@ -1,28 +1,27 @@
-
-def msec_to_samples(msec, sample_rate):
+def msec_to_sample_index(msec: int, sample_rate: float) -> int:
     return int((msec / 1000) * sample_rate)
 
 
-def sec_to_samples(sec, sample_rate):
+def sec_to_sample_index(sec: float, sample_rate: float) -> int:
     return int((sec) * sample_rate)
 
 
-def samples_to_msec(sample_index, sample_rate):
-    return int(samples_to_sec(sample_index, sample_rate) * 1000)
+def sample_index_to_msec(sample_index: int, sample_rate: float) -> int:
+    return int(sample_index_to_sec(sample_index, sample_rate) * 1000)
 
 
-def samples_to_sec(sample_index, sample_rate):
+def sample_index_to_sec(sample_index: int, sample_rate: float) -> float:
     return sample_index / sample_rate
 
 
 msec_precision_digits = 3
 
 
-def msec_to_timestamp(sample_msec_time):
-    return sec_to_timestamp(sample_msec_time / 1000)
+def msec_to_timestamp(msec_time: int) -> str:
+    return sec_to_timestamp(msec_time / 1000)
 
 
-def sec_to_timestamp(sample_sec_time):
+def sec_to_timestamp(sec_time: float) -> str:
 
     number_sign = ''
     if (sample_sec_time < 0):
@@ -51,7 +50,7 @@ def sec_to_timestamp(sample_sec_time):
 """
 
 
-def timestamp_to_sec(timestamp):
+def timestamp_to_sec(timestamp: str) -> float:
 
     time_and_msec = timestamp.split('.')
     time_parts = time_and_msec[0].split(':')
@@ -67,7 +66,7 @@ def timestamp_to_sec(timestamp):
     return seconds_sum + time_and_msec / 1000
 
 
-def sample_index_to_timestamp(sample_index, sample_rate):
+def sample_index_to_timestamp(sample_index: int, sample_rate: float) -> str:
     time_per_sample_frame_sec = 1 / sample_rate
 
     time_at_sample_sec = time_per_sample_frame_sec * sample_index
@@ -75,7 +74,7 @@ def sample_index_to_timestamp(sample_index, sample_rate):
     return sec_to_timestamp(time_at_sample_sec)
 
 
-def sample_range_to_timestamps(sample_range_tuple: tuple, sample_rate: float):
+def sample_index_range_to_timestamps(sample_range_tuple: tuple, sample_rate: float) -> tuple[str]:
     start_timestamp = sample_index_to_timestamp(sample_range_tuple[0], sample_rate)
     end_timestamp = sample_index_to_timestamp(sample_range_tuple[1], sample_rate)
 
@@ -85,7 +84,7 @@ def sample_range_to_timestamps(sample_range_tuple: tuple, sample_rate: float):
 def print_sample_range_timestamps(sample_range_tuple: tuple, sample_rate: float):
     print(sample_range_tuple)
 
-    sample_range_timestamps = sample_range_to_timestamps(sample_range_tuple, sample_rate)
+    sample_range_timestamps = sample_index_range_to_timestamps(sample_range_tuple, sample_rate)
 
     print(sample_range_timestamps[0])
     print(sample_range_timestamps[1])
