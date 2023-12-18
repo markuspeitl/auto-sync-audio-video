@@ -82,13 +82,18 @@ def normalize_symmetrical_float(data: np.ndarray, dtype=np.float32):
     # return ((float_data - min_data_value) / (max_data_value - min_data_value) - 0.5) * 2
 
 
-def downsample_audio(audio_np_array, downsample_block_size, sample_rate):
+def downsample_audio(audio_np_array: np.ndarray, downsample_block_size: int, sample_rate: float):
 
     total_sample_count = audio_np_array.shape[0]
 
     max_down_blocks = math.ceil(total_sample_count / downsample_block_size)
 
-    downsampled_audio = np.zeros((max_down_blocks, audio_np_array.shape[1]))
+    downsampled_audio = None
+
+    if (len(audio_np_array.shape) > 1):
+        downsampled_audio = np.zeros((max_down_blocks, audio_np_array.shape[1]), dtype=audio_np_array.dtype)
+    else:
+        downsampled_audio = np.zeros(max_down_blocks, dtype=audio_np_array.dtype)
 
     for block_index in range(0, max_down_blocks):
         start_index = int(block_index * downsample_block_size)
@@ -97,8 +102,12 @@ def downsample_audio(audio_np_array, downsample_block_size, sample_rate):
         if (end_index >= total_sample_count):
             end_index = total_sample_count - 1
 
-        # mean_value = np.mean(audio_np_array[start_index:end_index], axis=1)
-        mean_value = np.sum(audio_np_array[start_index:end_index], axis=0) / downsample_block_size
+        if (len(audio_np_array.shape) > 1):
+            # mean_value = np.mean(audio_np_array[start_index:end_index], axis=1)
+            mean_value = np.sum(audio_np_array[start_index:end_index], axis=0) / downsample_block_size
+        else:
+            # mean_value = np.mean(audio_np_array[start_index:end_index], axis=1)
+            mean_value = np.sum(audio_np_array[start_index:end_index]) / downsample_block_size
 
         # print(mean_value)
 
@@ -182,6 +191,6 @@ def resample_audio(target_sample_width_sec, audio_data, sample_rate):
 
     downsampled_audio, downsampled_rate = downsample_audio(audio_data, block_size_samples, sample_rate)
 
-    norm_float_audio = normalize_to_float(downsampled_audio)
+    norm_float_audio = normalize_symmetrical_float(downsampled_audio)
 
     return norm_float_audio, downsampled_rate

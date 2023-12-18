@@ -1,7 +1,7 @@
 from typing import Any
 import numpy as np
 from audio_plotting import show_waveforms
-from common_audio_processing import apply_audio_differentiation, normalize_symmetrical_float, read_audio_of_files
+from common_audio_processing import apply_audio_differentiation, downsample_audio, normalize_symmetrical_float, read_audio_of_files, resample_audio
 from time_conversion_util import sample_index_to_timestamp, sec_to_sample_index
 
 # Release delay/time of impulse detection
@@ -26,9 +26,14 @@ def extract_impulse_sample_indices(audio_data: np.ndarray, sample_rate: float, i
     if (audio_data.shape[1] > 1):
         audio_channel = audio_data[:, 0]
 
+    # audio_channel, sample_rate = resample_audio(0.010, np.abs(audio_channel), sample_rate)
+
     # We are focused on the speed of the change for detecting a short impulse
     audio_amplitude_sobel = apply_audio_differentiation(audio_channel)
     audio_amplitude_sobel = normalize_symmetrical_float(audio_amplitude_sobel)
+    """audio_amplitude_sobel[audio_amplitude_sobel > 0.5] = 0.5
+    audio_amplitude_sobel[audio_amplitude_sobel < -0.5] = -0.5
+    audio_amplitude_sobel = normalize_symmetrical_float(audio_amplitude_sobel)"""
 
     # audio_sample_bit_depth: int = 32
     # audio_sample_bit_depth: int = np.iinfo(original_data.dtype).max
@@ -40,6 +45,7 @@ def extract_impulse_sample_indices(audio_data: np.ndarray, sample_rate: float, i
     # print(len(selected_key_samples_indices))
     # print(selected_key_samples_indices)
 
+    # selected_key_samples_indices = np.where((audio_amplitude_sobel >= impulse_ramp_threshold) | (audio_amplitude_sobel <= -impulse_ramp_threshold))[0]
     selected_key_samples_indices = np.where(audio_amplitude_sobel >= impulse_ramp_threshold)[0]
 
     # print(len(selected_key_samples_indices))
