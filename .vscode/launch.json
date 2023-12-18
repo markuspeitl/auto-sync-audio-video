@@ -75,6 +75,22 @@
         "230412_0072S12.wav",
         //"230412_0072S34D09.wav",
       ]
+    },
+    {
+      "name": "video_sync_audio_remux.py 20231204_204607.mp4 230412_0072S12.wav",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/video_sync_audio_remux.py",
+      "args": [
+        "--impulse_ramp_threshold",
+        "0.40",
+        "--impulse_release_delay",
+        "0.50",
+        //"--show_plot",
+        "--play_on_finish",
+        "20231204_204607.mp4",
+        "230412_0072S12.wav"
+      ]
     }
   ]
 }

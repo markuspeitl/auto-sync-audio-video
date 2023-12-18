@@ -137,8 +137,8 @@ def calc_sync_offsets(audio_paths: list[str], impulse_ramp_threshold: float = 0.
     return sync_offsets_msec
 
 
-def calc_sync_offset(audio_path: str, impulse_ramp_threshold: float = 0.4, detect_release_threshold_sec: float = 0.1, show_plots: bool = False):
-    return calc_sync_offsets([audio_path], impulse_ramp_threshold, detect_release_threshold_sec, show_plots)[0]
+def calc_sync_offset(audio_path_a: str, audio_path_b: str, impulse_ramp_threshold: float = 0.4, detect_release_threshold_sec: float = 0.1, show_plots: bool = False):
+    return calc_sync_offsets([audio_path_a, audio_path_b], impulse_ramp_threshold, detect_release_threshold_sec, show_plots)[0]
 
 
 def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):

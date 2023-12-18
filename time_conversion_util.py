@@ -24,17 +24,17 @@ def msec_to_timestamp(msec_time: int) -> str:
 def sec_to_timestamp(sec_time: float) -> str:
 
     number_sign = ''
-    if (sample_sec_time < 0):
+    if (sec_time < 0):
         number_sign = '-'
 
-    sample_sec_time = abs(sample_sec_time)
+    sec_time = abs(sec_time)
 
-    sample_sec_time = round(sample_sec_time, 3)
+    sec_time = round(sec_time, 3)
 
-    msec = round((sample_sec_time * pow(10, msec_precision_digits)) % pow(10, msec_precision_digits))
-    sec = int(sample_sec_time) % 60
-    min = int(sample_sec_time / 60) % 3600
-    hours = int(sample_sec_time / 3600)
+    msec = round((sec_time * pow(10, msec_precision_digits)) % pow(10, msec_precision_digits))
+    sec = int(sec_time) % 60
+    min = int(sec_time / 60) % 3600
+    hours = int(sec_time / 3600)
 
     return f"{number_sign}{hours:0>2}:{min:0>2}:{sec:0>2}." + str(msec).zfill(msec_precision_digits)
 

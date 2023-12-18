@@ -4,6 +4,7 @@ import re
 import shutil
 import subprocess
 import sys
+from typing import Any
 
 import numpy as np
 
@@ -37,14 +38,46 @@ def read_audio_ffmpeg(video_path) -> (float, np.ndarray):
     return sample_rate, audio_data
 
 
-def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset_msec, output_range_timestamps: tuple):
+def add_cmd_option(cmd_args_array: list[str], option_key: str, option_val: Any, skip_value=None, condition: bool = True):
+    if (option_val == skip_value or not condition):
+        return
+
+    if (option_key):
+        cmd_args_array.append(option_key)
+
+    cmd_args_array.append(option_val)
+
+
+def add_cmd_args(cmd_args_array: list[str], args_to_append: list[str]):
+    cmd_args_array += args_to_append
+
+
+def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset_sec, output_range_timestamps: tuple = None):
     # remuxed_video_path = add_name_suffix_path(video_file_path, "_remuxed", ".mp4")
+
+    ouput_start_timestamp = None
+    output_end_timestamp = None
+    if (output_range_timestamps):
+        ouput_start_timestamp = output_range_timestamps[0]
+        output_end_timestamp = output_range_timestamps[1]
 
     # MKV container can hold both, normal pcm audio and hevc, h264, etc.
     # Which is great because we are not forced to reencode video audio, to mix our streams together into a container, like we would need to do with an mp4 container
     remuxed_video_path = add_name_suffix_path(video_file_path, "_remuxed", remuxed_video_container)
 
-    audio_offset_string = msec_to_timestamp(abs(audio_offset_msec))
+    audio_offset_string = sec_to_timestamp(abs(audio_offset_sec))
+
+    cmd_args = [
+        ffmpeg_binary_location
+    ]
+
+    add_cmd_option(cmd_args, '-ss', audio_offset_string, condition=bool(audio_offset_sec < 0.0))
+
+    add_cmd_option(cmd_args, '-i', video_file_path)
+
+    add_cmd_option(cmd_args, '-ss', audio_offset_string, condition=bool(audio_offset_sec > 0.0))
+
+    add_cmd_option(cmd_args, '-i', audio_file_path)
 
     codec_args = [
         '-c:v',
@@ -52,6 +85,8 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
         '-c:a',
         'copy',
     ]
+
+    add_cmd_args(cmd_args, codec_args)
 
     mixing_muxing_args = [
         '-map',
@@ -61,24 +96,14 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
         '-shortest',
     ]
 
-    cmd_args = [
-        ffmpeg_binary_location,
-        '-i',
-        video_file_path,
-        '-i',
-        audio_file_path,
-        *codec_args,
-        *mixing_muxing_args,
-        '-ss',
-        output_range_timestamps[0],
-        '-to',
-        output_range_timestamps[1],
-        # '-vf',
-        # f"trim={output_range_timestamps[0]}:{output_range_timestamps[1]}",
-        remuxed_video_path
-    ]
+    add_cmd_args(cmd_args, mixing_muxing_args)
 
-    if (audio_offset_msec < 0):
+    add_cmd_option(cmd_args, '-ss', ouput_start_timestamp)
+    add_cmd_option(cmd_args, '-to', output_end_timestamp)
+
+    add_cmd_option(cmd_args, None, remuxed_video_path)
+
+    """if (audio_offset_msec < 0):
 
         cmd_args.insert(1, '-ss')
         cmd_args.insert(2, audio_offset_string)
@@ -91,7 +116,7 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
 
         # remux_command = f"{ffmpeg_binary_location} -i {video_file_path}  -ss {audio_offset_string} -i {audio_file_path} -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest -ss {output_range_timestamps[0]} -to {output_range_timestamps[1]} {remuxed_video_path}"
 
-    # Example (video was started before audio): {ffmpeg_binary_location}  -ss 00:00:03.625 -i 20231204_204607.mp4 -i 230412_0072S12.wav -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest remuxed_synced.mp4 -threads 6
+    # Example (video was started before audio): {ffmpeg_binary_location}  -ss 00:00:03.625 -i 20231204_204607.mp4 -i 230412_0072S12.wav -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest remuxed_synced.mp4 -threads 6"""
 
     remux_command = " ".join(cmd_args)
 
@@ -102,6 +127,9 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
     return remuxed_video_path
 
     # Audio starts before video -> sync clap is later in audio then in video ( -> audio needs to be trimmed at start, before syncing)
+
+# '-vf',
+# f"trim={output_range_timestamps[0]}:{output_range_timestamps[1]}",
 
 
 match_duration = re.compile('(?<=duration=).+')
