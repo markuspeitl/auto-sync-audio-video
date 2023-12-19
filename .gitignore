@@ -1,6 +1,13 @@
 ide-were-were*
 *.wav
 *.mp4
+*.avi
+*.mp3
+*.png
+*.jpg
+*.flac
+*.mkv
+*.wv
 *_remuxed.mkv
 thumbnails
 *.pyc
