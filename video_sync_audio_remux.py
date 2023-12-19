@@ -2,8 +2,6 @@
 import argparse
 import os
 import sys
-from typing import Any
-from os.path import dirname, join
 from audio_sync_offset_calc import add_generic_optional_parser_arguments as add_sync_calc_generic_optional_parser_arguments, calc_sync_offset, calc_sync_offsets
 from ffmpeg_processing import remux_video_audio_with_offset
 
@@ -34,6 +32,7 @@ def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
     # parser.add_argument('-p', '--play_on_finish', '--play',                         action="store_true", help="Play video when finished with processing")
 
     parser.add_argument('-p', '--play_on_finish', '--play', action="store_true",  help="")
+    # parser.add_argument('-ram', '--store_on_ram', action="store_true",  help="Store the remuxed video on ram, only available on linux stores to /dev/shm")
     parser.add_argument('-pbin', '--play_on_finish_binary', '--play_bin', help="Use this application to play back the processed audio, when the fx chains have been applied", default='/usr/bin/mpv')
     parser.add_argument('-k', '--keep_transient_files', '--keep',                   action="store_true", help="Keep files that were the results of processing or extraction, but can be recalculated from the source files if needed")
 
@@ -64,9 +63,14 @@ def main():
     remuxed_video_file_path = None
     if (not args.no_video_remuxing):
         remuxed_video_file_path = remux_video_audio_with_offset(args.video_src_path, args.audio_src_path, args.remux_sync_offset_sec)
+        print(remuxed_video_file_path)
 
-    if (args.play_on_finish and args.play_on_finish_binary and remuxed_video_file_path):
-        os.system(f'{args.play_on_finish_binary} {remuxed_video_file_path}')
+        if (args.play_on_finish and args.play_on_finish_binary and remuxed_video_file_path):
+            os.system(f'{args.play_on_finish_binary} {remuxed_video_file_path}')
+
+        return
+
+    print(args.remux_sync_offset_sec)
 
 
 if __name__ == '__main__':

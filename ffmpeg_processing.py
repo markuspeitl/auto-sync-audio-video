@@ -45,21 +45,53 @@ def add_cmd_option(cmd_args_array: list[str], option_key: str, option_val: Any, 
     if (option_key):
         cmd_args_array.append(option_key)
 
-    cmd_args_array.append(option_val)
+    if (option_val):
+        cmd_args_array.append(option_val)
+
+
+def add_cmd_flag(cmd_args_array: list[str], flag_key: str, condition: bool = True):
+    if (condition):
+        cmd_args_array.append(flag_key)
 
 
 def add_cmd_args(cmd_args_array: list[str], args_to_append: list[str]):
     cmd_args_array += args_to_append
 
 
+def copy_streams_options():
+    codec_args = [
+        '-c:v',
+        'copy',
+        '-c:a',
+        'copy',
+    ]
+    return codec_args
+
+
+def trim_media_output(src_file_path: str, target_file_path: str, output_range_timestamps: tuple[str] = None, overwrite_target=False):
+    if (not output_range_timestamps):
+        output_range_timestamps = (None, None)
+
+    cmd_args = [ffmpeg_binary_location]
+
+    add_cmd_option(cmd_args, '-i', src_file_path)
+    add_cmd_args(cmd_args, copy_streams_options())
+
+    add_cmd_option(cmd_args, '-ss', output_range_timestamps[0])
+    add_cmd_option(cmd_args, '-to', output_range_timestamps[1])
+    add_cmd_flag(cmd_args, '-y', condition=overwrite_target)
+    add_cmd_option(cmd_args, None, target_file_path)
+    full_command_string = " ".join(cmd_args)
+    print(full_command_string)
+    os.system(full_command_string)
+    return target_file_path
+
+
 def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset_sec, output_range_timestamps: tuple = None):
     # remuxed_video_path = add_name_suffix_path(video_file_path, "_remuxed", ".mp4")
 
-    ouput_start_timestamp = None
-    output_end_timestamp = None
-    if (output_range_timestamps):
-        ouput_start_timestamp = output_range_timestamps[0]
-        output_end_timestamp = output_range_timestamps[1]
+    if (not output_range_timestamps):
+        output_range_timestamps = (None, None)
 
     # MKV container can hold both, normal pcm audio and hevc, h264, etc.
     # Which is great because we are not forced to reencode video audio, to mix our streams together into a container, like we would need to do with an mp4 container
@@ -67,9 +99,7 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
 
     audio_offset_string = sec_to_timestamp(abs(audio_offset_sec))
 
-    cmd_args = [
-        ffmpeg_binary_location
-    ]
+    cmd_args = [ffmpeg_binary_location]
 
     add_cmd_option(cmd_args, '-ss', audio_offset_string, condition=bool(audio_offset_sec < 0.0))
 
@@ -79,14 +109,7 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
 
     add_cmd_option(cmd_args, '-i', audio_file_path)
 
-    codec_args = [
-        '-c:v',
-        'copy',
-        '-c:a',
-        'copy',
-    ]
-
-    add_cmd_args(cmd_args, codec_args)
+    add_cmd_args(cmd_args, copy_streams_options())
 
     mixing_muxing_args = [
         '-map',
@@ -94,12 +117,14 @@ def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset
         '-map',
         '1:a:0',
         '-shortest',
+        # '-map_metadata',
+        # '0'
     ]
 
     add_cmd_args(cmd_args, mixing_muxing_args)
 
-    add_cmd_option(cmd_args, '-ss', ouput_start_timestamp)
-    add_cmd_option(cmd_args, '-to', output_end_timestamp)
+    add_cmd_option(cmd_args, '-ss', output_range_timestamps[0])
+    add_cmd_option(cmd_args, '-to', output_range_timestamps[1])
 
     add_cmd_option(cmd_args, None, remuxed_video_path)
 

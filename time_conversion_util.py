@@ -69,7 +69,7 @@ def timestamp_to_sec(timestamp: str) -> float:
 def sample_index_to_timestamp(sample_index: int, sample_rate: float) -> str:
     time_per_sample_frame_sec = 1 / sample_rate
 
-    time_at_sample_sec = time_per_sample_frame_sec * sample_index
+    time_at_sample_sec = sample_index * time_per_sample_frame_sec
 
     return sec_to_timestamp(time_at_sample_sec)
 

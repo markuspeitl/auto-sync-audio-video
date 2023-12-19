@@ -91,6 +91,18 @@
         "20231204_204607.mp4",
         "230412_0072S12.wav"
       ]
+    },
+    {
+      "name": "detect_audio_activity_trim.py 20231204_204607_remuxed.mkv",
+      "type": "python",
+      "request": "launch",
+      "program": "${workspaceFolder}/detect_audio_activity_trim.py",
+      "args": [
+        //"--show_plot",
+        "--overwrite_target",
+        "--play_on_finish",
+        "20231204_204607_remuxed.mkv"
+      ]
     }
   ]
 }

@@ -1,11 +1,8 @@
-
-import os
 from typing import Any
 import numpy as np
 from audio_plotting import show_waveforms
-from common_audio_processing import apply_audio_differentiation, delete_video_extracted_audio, read_audio_of_file, resample_audio
-from path_util import get_extracted_audio_path
-from time_conversion_util import print_sample_range_timestamps, sample_index_to_timestamp, sample_range_to_timestamps, sec_to_samples
+from common_audio_processing import delete_video_extracted_audio, read_audio_of_file, resample_audio
+from time_conversion_util import print_sample_range_timestamps, sample_index_range_to_timestamps, sample_index_to_timestamp, sec_to_sample_index
 
 
 def merge_range_with_next_recursive(index: int, tuple_ranges: list[tuple], close_gap_samples_threshold: int = 1):
@@ -148,7 +145,7 @@ def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: 
     modified_index_list = []
 
     for index, range_index in enumerate(sample_range_tuple):
-        modified_index_list.append(range_index + sec_to_samples(add_time_tuple_seconds[index], sample_rate))
+        modified_index_list.append(range_index + sec_to_sample_index(add_time_tuple_seconds[index], sample_rate))
 
     return tuple(modified_index_list)
 
@@ -157,8 +154,8 @@ def detect_song_time_range(video_file_path: str, options: dict[str, Any]):
     # extracted_audio_path = get_extracted_audio_path(video_file_path)
     sample_rate, audio_data = read_audio_of_file(video_file_path)
 
-    if (not options.keep_transient_files):
-        delete_video_extracted_audio(video_file_path)
+    # if (not options.keep_transient_files):
+    #    delete_video_extracted_audio(video_file_path)
 
     # show_waveforms(audio_data, sample_rate)
 
@@ -187,7 +184,7 @@ def detect_song_time_range(video_file_path: str, options: dict[str, Any]):
     final_song_range = add_time_to_sample_range(fine_song_range, (options.song_start_prerun, options.song_end_postrun), downsampled_rate_fine)
     print_sample_range_timestamps(final_song_range, downsampled_rate_fine)
 
-    if (options.plot_song_activity_detection):
+    if (options.show_plot):
 
         # plotting_audio = np.concatenate(downsampled_audio, downsampled_audio_fine)
 
@@ -209,4 +206,6 @@ def detect_song_time_range(video_file_path: str, options: dict[str, Any]):
 
     # print(selected_loud_samples_indices)
 
-    return sample_range_to_timestamps(final_song_range, downsampled_rate_fine)
+    final_song_range_timestamps = sample_index_range_to_timestamps(final_song_range, downsampled_rate_fine)
+
+    return final_song_range_timestamps
