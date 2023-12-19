@@ -1,11 +1,13 @@
+from typing import Tuple, TypedDict
 from typing import Any
 import numpy as np
 from audio_plotting import show_waveforms
-from common_audio_processing import delete_video_extracted_audio, read_audio_of_file, resample_audio
-from time_conversion_util import print_sample_range_timestamps, sample_index_range_to_timestamps, sample_index_to_timestamp, sec_to_sample_index
+from common_audio_processing import read_audio_of_file, resample_audio
+from dot_dict_conversion import to_dot_dict_with_defaults
+from time_conversion_util import print_sample_range_timestamps, sample_index_range_to_timestamps, sec_to_sample_index
 
 
-def merge_range_with_next_recursive(index: int, tuple_ranges: list[tuple], close_gap_samples_threshold: int = 1):
+def merge_range_with_next_recursive(index: int, tuple_ranges: list[tuple], close_gap_samples_threshold: int = 1) -> list[tuple[int]]:
 
     if (index >= (len(tuple_ranges) - 1)):
         return tuple_ranges
@@ -22,22 +24,21 @@ def merge_range_with_next_recursive(index: int, tuple_ranges: list[tuple], close
     return tuple_ranges
 
 
-def calc_range_length(range_tuple):
+def calc_range_length(range_tuple: tuple[int]) -> int:
     return range_tuple[1] - range_tuple[0]
 
 
-def select_long_ranges(tuple_ranges, long_range_threshold):
+def select_long_ranges(tuple_ranges, long_range_threshold) -> list[tuple[int]]:
 
     filtered_tuple_ranges = filter(calc_range_length, tuple_ranges)
     return filtered_tuple_ranges
 
 
-def sort_ranges_by_longest(tuple_ranges):
+def sort_ranges_by_longest(tuple_ranges) -> list[tuple[int]]:
     return sorted(tuple_ranges, key=calc_range_length, reverse=True)
 
+
 # ! side effect tuple_ranges modified
-
-
 def merge_close_ranges(tuple_ranges: list[tuple], close_gap_samples_threshold: int = 1) -> list[tuple]:
 
     for index in range(0, len(tuple_ranges) - 1):
@@ -45,30 +46,13 @@ def merge_close_ranges(tuple_ranges: list[tuple], close_gap_samples_threshold: i
 
     return tuple_ranges
 
-    """current_range = tuple_ranges[0]
-    next_range = tuple_ranges[1]
 
-    if (next_range[0] - current_range[1] <= close_gap_threshold):
-        tuple_ranges[0] = (current_range[0], next_range[1])
+def detect_on_ranges(array_data, on_threshold=0.1) -> list[tuple[int]]:
 
-        return merge_close_ranges(tuple_ranges, close_gap_threshold)
+    detected_on_range_tuples: list[tuple[int]] = []
 
-    return tuple_ranges
-
-    for index in range(0, tuple_ranges - 1):
-        current_range = tuple_ranges[index]
-        next_range = tuple_ranges[index + 1]
-
-        if(current_range)
-    """
-
-
-def detect_on_ranges(array_data, on_threshold=0.1):
-
-    detected_on_range_tuples = []
-
-    range_start = -1
-    is_inside_range = False
+    range_start: int = -1
+    is_inside_range: bool = False
     for index, sample in enumerate(array_data):
 
         if (any(sample >= on_threshold) and not is_inside_range):
@@ -88,7 +72,7 @@ def detect_on_ranges(array_data, on_threshold=0.1):
     return detected_on_range_tuples
 
 
-def detect_song_range(array_data, on_threshold=0.1, close_gap_samples_threshold: int = 8):
+def detect_song_range(array_data, on_threshold=0.1, close_gap_samples_threshold: int = 8) -> Tuple[tuple, list[tuple]]:
 
     detected_on_range_tuples = detect_on_ranges(array_data, on_threshold)
     detected_on_range_tuples = merge_close_ranges(detected_on_range_tuples, close_gap_samples_threshold=close_gap_samples_threshold)
@@ -97,7 +81,7 @@ def detect_song_range(array_data, on_threshold=0.1, close_gap_samples_threshold:
     return detected_on_range_tuples[0], detected_on_range_tuples
 
 
-def convert_sample_index(src_sample_index: int, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False):
+def scale_sample_index(src_sample_index: int, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False) -> int:
     scale_factor = target_sample_rate / src_sample_rate
 
     scaled_index = src_sample_index * scale_factor
@@ -108,18 +92,18 @@ def convert_sample_index(src_sample_index: int, src_sample_rate: float, target_s
     return int(scaled_index)
 
 
-def convert_sample_tuple(range_tuple: tuple, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False):
+def convert_sample_tuple(range_tuple: tuple, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False) -> tuple:
 
     scaled_index_list = []
 
     for index in range_tuple:
-        scaled_index_list.append(convert_sample_index(index, src_sample_rate, target_sample_rate, round_to_nearest))
+        scaled_index_list.append(scale_sample_index(index, src_sample_rate, target_sample_rate, round_to_nearest))
 
     return tuple(scaled_index_list)
 
 
 # find audio ramp start
-def find_valley_index(data_array, start_index, direction=-1, valley_threshold=0.1):
+def find_valley_index(data_array, start_index, direction=-1, valley_threshold=0.1) -> int:
 
     index = start_index
     while index >= 0 and index < len(data_array):
@@ -134,15 +118,15 @@ def find_valley_index(data_array, start_index, direction=-1, valley_threshold=0.
     return index
 
 
-def refine_range_towards_valleys(range_tuple: tuple, audio_data_samples: np.array, valley_thresholds=(0.05, 0.02)):
+def refine_range_towards_valleys(range_tuple: tuple, audio_data_samples: np.array, valley_thresholds=(0.05, 0.02)) -> tuple[int]:
     start_valley_index = find_valley_index(audio_data_samples, range_tuple[0], direction=-1, valley_threshold=valley_thresholds[0])
     end_valley_index = find_valley_index(audio_data_samples, range_tuple[1], direction=1, valley_threshold=valley_thresholds[1])
     return (start_valley_index, end_valley_index)
 
 
-def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: tuple[float], sample_rate: float):
+def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: tuple[float], sample_rate: float) -> tuple[int]:
 
-    modified_index_list = []
+    modified_index_list: list[int] = []
 
     for index, range_index in enumerate(sample_range_tuple):
         modified_index_list.append(range_index + sec_to_sample_index(add_time_tuple_seconds[index], sample_rate))
@@ -150,7 +134,33 @@ def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: 
     return tuple(modified_index_list)
 
 
-def detect_song_time_range(video_file_path: str, options: dict[str, Any]):
+class ActivityDetectionOptions(TypedDict):
+    song_detection_block_size: float
+    song_on_threshold: float
+    range_refine_block_size: float
+    start_valley_threshold: float
+    end_valley_threshold: float
+    song_start_prerun: float
+    song_end_postrun: float
+    show_plot: float
+
+
+activity_detection_options_defaults: ActivityDetectionOptions = {
+    'song_detection_block_size': 4.0,
+    'song_on_threshold': 0.1,
+    'range_refine_block_size': 1.0,
+    'start_valley_threshold': 0.03,
+    'end_valley_threshold': 0.005,
+    'song_start_prerun': -1.0,
+    'song_end_postrun': 0.0,
+    'show_plot': False,
+}
+
+
+def detect_song_time_range(video_file_path: str, options: ActivityDetectionOptions = activity_detection_options_defaults):
+
+    options: ActivityDetectionOptions = to_dot_dict_with_defaults(options, activity_detection_options_defaults)
+
     # extracted_audio_path = get_extracted_audio_path(video_file_path)
     sample_rate, audio_data = read_audio_of_file(video_file_path)
 
