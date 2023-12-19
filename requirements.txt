@@ -1,0 +1,12 @@
+argparse
+numpy
+matplotlib
+ffmpegio
+scipy
+
+#sudo apt-get install ffmpeg
+#sudo apt-get install mpv
+
+#pip3 install -U openai-whisper
+#pip3 install SpeechRecognition
+#pip3 install pyaudio numpy scipy
