@@ -8,9 +8,7 @@
 # pip3 install soundfile
 
 import sys
-from pathlib import PurePath
 import speech_recognition as sr
-
 from path_util import add_name_suffix_path
 
 

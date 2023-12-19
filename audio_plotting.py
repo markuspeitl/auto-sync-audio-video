@@ -3,8 +3,6 @@ import time
 from matplotlib import pyplot as plt, ticker
 from matplotlib.axes import Axes
 import numpy as np
-import matplotlib.dates as mdates
-from time_conversion_util import sec_to_timestamp
 
 
 def sec_to_timestamp_format(x, pos):

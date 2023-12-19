@@ -1,10 +1,7 @@
 
 import argparse
-import os
 import sys
-from typing import Any, Callable
-import numpy as np
-from os.path import dirname, join
+from typing import Callable
 from audio_impulse_detection import extract_impulse_indices_of_files
 
 from time_conversion_util import sample_index_to_sec

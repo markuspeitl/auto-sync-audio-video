@@ -34,7 +34,7 @@ reaper_batch_file_suffix = "_reaper_batch_processing_def.txt"
 
 
 # Default variables
-platform_values_store = {
+platform_values_store: dict[str, dict[str, str]] = {
     "default_fx_chains_dir": {
         'linux': join(current_user_home, ".config/REAPER/FXChains"),
         'osx': join(current_user_home, ".config/REAPER/FXChains"),

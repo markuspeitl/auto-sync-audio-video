@@ -2,12 +2,8 @@
 import argparse
 import os
 import sys
-import numpy as np
-from os.path import dirname, join
-import matplotlib.pyplot as plt
-from apply_reaper_fx_chain import apply_audio_fx_chains, apply_audio_processing_chain
+from apply_reaper_fx_chain import apply_audio_fx_chains
 from audio_activity_range_detection import detect_song_time_range
-from audio_impulse_detection import find_remux_sync_offset_msec
 from ffmpeg_processing import pull_video_thumbnail_samples, remux_video_audio_with_offset
 from transcribe_audio import transcribe_audio_file
 
@@ -58,7 +54,7 @@ def main():
     parser.add_argument('audio_src_path', help="Audio file to be muxed/mixed and synced with the video data of the 'video_src_path' file")
     add_generic_optional_parser_arguments(parser)
     parser.add_argument('-range', '--on_range_timestamps', '--on_range', nargs='+', type=str, help="Manually specifies the range of interested which should be selected from the files (relative to the video file), 2 timestamps in the format HH:MM:SS.MSEC3DIGITS  ")
-    parser.add_argument('-offset', '--remux_sync_offset_msec', '--sync_offset_msec', '--sync_offset', type=int, help="Manually set the offset between the 'video audio' and the 'external audio' for the purpose of syncing the 2")
+    parser.add_argument('-offset', '--remux_sync_offset_sec', '--sync_offset_msec', '--sync_offset', type=int, help="Manually set the offset between the 'video audio' and the 'external audio' for the purpose of syncing the 2")
 
     args: argparse.Namespace = parser.parse_args()
 
@@ -88,8 +84,8 @@ def main():
     if (not args.on_range_timestamps):
         args.on_range_timestamps = detect_song_time_range(video_file_path, args)
 
-    if (not args.remux_sync_offset_msec):
-        args.remux_sync_offset_msec = find_remux_sync_offset_msec(audio_file_path, video_file_path, args)
+    if (not args.remux_sync_offset_sec):
+        args.remux_sync_offset_sec = remux_video_audio_with_offset(video_file_path, audio_file_path, args.remux_sync_offset_sec, args)
 
     processed_audio_file_path = audio_file_path
 
@@ -101,8 +97,8 @@ def main():
 
         # TODO song range timestamps have to consider the offset as we are truncating the output of the synced merge
         # args.on_range_timestamps = ('00:03:33.000', '00:09:24.000')
-        # args.remux_sync_offset_msec = -3652
-        remuxed_video_file_path = remux_video_audio_with_offset(video_file_path, processed_audio_file_path, args.remux_sync_offset_msec, args.on_range_timestamps)
+        # args.remux_sync_offset_sec = -3652
+        remuxed_video_file_path = remux_video_audio_with_offset(video_file_path, processed_audio_file_path, args.remux_sync_offset_sec, args.on_range_timestamps)
 
         if (not args.keep_transient_files and processed_audio_file_path != audio_file_path):
             os.unlink(processed_audio_file_path)

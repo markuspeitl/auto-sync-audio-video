@@ -5,9 +5,7 @@ import re
 from typing import Any, Callable
 import numpy as np
 from scipy import ndimage
-from scipy.io import wavfile
-
-from ffmpeg_processing import extract_audio_from_video, read_audio_ffmpeg
+from ffmpeg_processing import read_audio_ffmpeg
 from path_util import get_extracted_audio_path
 
 

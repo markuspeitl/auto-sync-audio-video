@@ -1,4 +1,3 @@
-from typing import Any
 import numpy as np
 from audio_plotting import show_waveforms
 from common_audio_processing import apply_audio_differentiation, downsample_audio, normalize_symmetrical_float, read_audio_of_files, resample_audio
