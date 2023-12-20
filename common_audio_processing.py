@@ -1,4 +1,5 @@
 
+from skimage.measure import block_reduce
 import math
 import os
 import re
@@ -80,7 +81,21 @@ def normalize_symmetrical_float(data: np.ndarray, dtype=np.float32):
     # return ((float_data - min_data_value) / (max_data_value - min_data_value) - 0.5) * 2
 
 
+# Distorts around the edges if array size not perfectly divisible by downsample_block_size (-> only use for applications where the first and last block do not need to be accurate)
 def downsample_audio(audio_np_array: np.ndarray, downsample_block_size: int, sample_rate: float):
+
+    # out_of_bounds_val = np.mean(audio_np_array)
+    out_of_bounds_val = 0
+
+    window_shape = (int(downsample_block_size))
+    if (len(audio_np_array.shape) > 1):
+        window_shape = (audio_np_array.shape[1], int(downsample_block_size))
+
+    downsampled_audio = block_reduce(audio_np_array, window_shape, func=np.mean, cval=out_of_bounds_val)
+    return downsampled_audio, float(sample_rate / downsample_block_size)
+
+
+def downsample_audio_python(audio_np_array: np.ndarray, downsample_block_size: int, sample_rate: float):
 
     total_sample_count = audio_np_array.shape[0]
 

@@ -19,13 +19,13 @@ def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
     parser.add_argument('-ns', '--no_clap_sync', '--no_sync',                       action="store_true", help="Do not detect the positions of claps in the video and audio file for the purpose of synchronizing those 2 recordings/files")
 
     # Song range/Audio activity range detection options
-    parser.add_argument('-st', '--song_on_threshold', '--song_threshold',           type=float, help="Threshold of 'song_detection_block_size' window where activity is detected [0.0, 1.0]", default=0.1)
-    parser.add_argument('-sb', '--song_detection_block_size', '--song_block_size',  type=float, help="Averaging window size for activity detection in seconds - all samples in each window are averaged to get an activity value over longer timescale", default=4.0)
-    parser.add_argument('-rb', '--range_refine_block_size', '--refine_block_size',  type=float, help="Averaging window size for refining the the ranges, detected with the 'song_block_size' window (accuracy of final range result)", default=1.0)
+    parser.add_argument('-st', '--rough_active_threshold', '--song_threshold',           type=float, help="Threshold of 'rough_activity_block_size' window where activity is detected [0.0, 1.0]", default=0.1)
+    parser.add_argument('-sb', '--rough_activity_block_size', '--song_block_size',  type=float, help="Averaging window size for activity detection in seconds - all samples in each window are averaged to get an activity value over longer timescale", default=4.0)
+    parser.add_argument('-rb', '--fine_activity_block_size', '--refine_block_size',  type=float, help="Averaging window size for refining the the ranges, detected with the 'song_block_size' window (accuracy of final range result)", default=1.0)
     parser.add_argument('-sv', '--start_valley_threshold', '--start_valley',        type=float, help="Song range refinement valley detection threshold, range start will walk towards start of song until this sample value is reached", default=0.03)
     parser.add_argument('-ev', '--end_valley_threshold', '--end_valley',            type=float, help="Song range refinement valley detection threshold, range end will walk towards start of song until this sample value is reached", default=0.005)
-    parser.add_argument('-spr', '--song_start_prerun', '--prerun',                  type=float, help="Time value in seconds added to the final detected start position after song range detection finished", default=-1.0)
-    parser.add_argument('-spo', '--song_end_postrun', '--postrun',                  type=float, help="Time value in seconds added to the final detected end position after song range detection finished", default=0)
+    parser.add_argument('-spr', '--activity_start_prerun', '--prerun',                  type=float, help="Time value in seconds added to the final detected start position after song range detection finished", default=-1.0)
+    parser.add_argument('-spo', '--activity_end_postrun', '--postrun',                  type=float, help="Time value in seconds added to the final detected end position after song range detection finished", default=0)
     parser.add_argument('-plots', '--plot_song_activity_detection', '--plot_activity',    action="store_true", help="Show plots of the song/activity detection responses")
     parser.add_argument('-nr', '--no_on_range_detection', '--no_on_range',          action="store_true", help="Do not automatically detect where the song/audio action start, ends and cut the output video to that range when muxing")
 

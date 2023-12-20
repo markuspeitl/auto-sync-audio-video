@@ -1,4 +1,5 @@
 from collections.abc import Iterable
+from functools import reduce
 from typing import Tuple, TypedDict
 from typing import Any
 import numpy as np
@@ -6,6 +7,21 @@ from audio_plotting import show_waveforms
 from common_audio_processing import normalize_symmetrical_float, read_audio_of_file, resample_audio
 from dot_dict_conversion import to_dot_dict_with_defaults
 from time_conversion_util import print_sample_range_timestamps, sample_index_range_to_timestamps, sec_to_sample_index
+
+
+# Convolve individual channels
+def normalized_channel_convolve(data: np.ndarray, kernel: np.ndarray):
+
+    kernel_sum = np.sum(kernel)
+    norm_kernel = np.asarray(kernel, np.float32) / kernel_sum
+
+    if (len(data.shape) > 1):
+        for index in range(0, len(data.shape)):
+            data[index] = np.convolve(data[index], norm_kernel, 'valid')
+    else:
+        data = np.convolve(data, norm_kernel, 'valid')
+
+    return data
 
 
 def merge_range_with_next_recursive(index: int, tuple_ranges: list[tuple], close_gap_samples_threshold: int = 1) -> list[tuple[int]]:
@@ -77,13 +93,14 @@ def detect_on_ranges(array_data: np.ndarray, on_threshold: float = 0.1) -> list[
     return detected_on_range_tuples
 
 
-def detect_active_range(array_data: np.ndarray, on_threshold: float = 0.1, close_gap_samples_threshold: int = 8) -> Tuple[tuple, list[tuple]]:
+def detect_active_range(array_data: np.ndarray, on_threshold: float = 0.1, close_gap_samples_threshold: int = 2) -> Tuple[tuple, list[tuple]]:
 
-    detected_on_range_tuples = detect_on_ranges(array_data, on_threshold)
-    detected_on_range_tuples = merge_close_ranges(detected_on_range_tuples, close_gap_samples_threshold=close_gap_samples_threshold)
-    detected_on_range_tuples = sort_ranges_by_longest(detected_on_range_tuples)
+    all_detected_on_range_tuples = detect_on_ranges(array_data, on_threshold)
+    detected_on_range_tuples = list(all_detected_on_range_tuples)
+    merged_detected_on_range_tuples = merge_close_ranges(detected_on_range_tuples, close_gap_samples_threshold=close_gap_samples_threshold)
+    merged_detected_on_range_tuples = sort_ranges_by_longest(merged_detected_on_range_tuples)
 
-    return detected_on_range_tuples[0], detected_on_range_tuples
+    return merged_detected_on_range_tuples[0], merged_detected_on_range_tuples, all_detected_on_range_tuples
 
 
 def scale_sample_index(src_sample_index: int, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False) -> int:
@@ -155,13 +172,13 @@ class ActivityDetectionOptions(TypedDict):
 
 
 activity_detection_options_defaults: ActivityDetectionOptions = {
-    'rough_activity_block_size': 4.0,
+    'rough_activity_block_size': 3.25,
     'rough_active_threshold': 0.15,
     'fine_activity_block_size': 0.5,
     'start_valley_threshold': 0.03,
     'end_valley_threshold': 0.0175,
-    'activity_start_prerun': -0.65,
-    'activity_end_postrun': 0.3,
+    'activity_start_prerun': -0.5,
+    'activity_end_postrun': 0.25,
     'show_plot': False,
 }
 
@@ -170,13 +187,10 @@ def detect_audio_resampled_active_range(audio_data: np.ndarray, sample_rate: flo
 
     resampled_audio_blocks_data, resampled_audio_samplerate = resample_audio(resampled_block_size_sec, np.abs(audio_data), sample_rate)
 
-    """if (len(resampled_audio_blocks_data.shape) > 1):
-        for index in range(0, len(resampled_audio_blocks_data.shape)):
-            resampled_audio_blocks_data[index] = np.convolve(resampled_audio_blocks_data[index], np.ones(3, dtype=int), 'valid')
-    else:
-        resampled_audio_blocks_data = np.convolve(resampled_audio_blocks_data, np.ones(3, dtype=float) / 3, 'valid')"""
+    # sliding window for smoothing out data (simple averaging window)
+    # normalized_channel_convolve(resampled_audio_blocks_data, np.ones(3, dtype=int))
 
-    active_range_samples, all_detected_ranges = detect_active_range(resampled_audio_blocks_data, active_threshold)
+    active_range_samples, all_merged_detected_ranges, all_detected_ranges = detect_active_range(resampled_audio_blocks_data, active_threshold)
 
     print_sample_range_timestamps(active_range_samples, resampled_audio_samplerate)
 
