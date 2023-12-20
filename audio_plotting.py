@@ -13,11 +13,17 @@ def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sampl
 
     data_sample_length = data.shape[0]
 
-    timeline_data = np.linspace(
+    """timeline_data = np.linspace(
         0,  # start
         1,
         num=data_sample_length
-    ) * data_sample_length / sample_rate
+    ) * data_sample_length / sample_rate"""
+
+    timeline_data = np.linspace(
+        0,
+        1,
+        num=data_sample_length
+    ) * (data_sample_length - 1) / sample_rate
 
     # time_labels = list(map(lambda time_sec: sec_to_timestamp(time_sec), timeline_data))
 
@@ -72,17 +78,23 @@ def plot_timeline_data(title: str, target_plot_ax: Axes, data: np.ndarray, sampl
 
     # actual plotting
     # plt.plot(timeline_data, audio_channel_data)
-    subplot_ax.plot(timeline_data, data, marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
-    # subplot_ax.bar(timeline_data, data)
+    # subplot_ax.plot(timeline_data, data, marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
+    subplot_ax.plot(timeline_data, data, zorder=5)
+    # subplot_ax.bar(timeline_data, data, zorder=1)
     # subplot_ax.stem(timeline_data, data, '-gD', marker='^', markerfacecolor='red', markeredgecolor='red', markersize=15, markevery=list(marker_indices), color='blue')
 
     if (marked_ranges and len(marked_ranges) > 0):
         for marked_range in marked_ranges:
-            subplot_ax.axvspan(marked_range[0], marked_range[1], color='green', alpha=0.4)
+            marked_range_scaled = (marked_range[0] * 1 / sample_rate, marked_range[1] * 1 / sample_rate)
+            subplot_ax.axvspan(marked_range_scaled[0], marked_range_scaled[1], color='green', alpha=0.4)
+
+    marker_range_scaled = (int(marker_indices[0] * 1 / sample_rate), int(marker_indices[1] * 1 / sample_rate))
+    subplot_ax.scatter(marker_range_scaled[0], data[int(marker_indices[0])], marker='^', color="red", s=(15**2), zorder=10)
+    subplot_ax.scatter(marker_range_scaled[1], data[int(marker_indices[1])], marker='^', color="red", s=(15**2), zorder=10)
 
     if (fill_down):
         # plt.fill_between(timeline_data, audio_channel_data, color='blue', alpha=0.3)
-        subplot_ax.fill_between(timeline_data, data, color='blue', alpha=0.3)
+        subplot_ax.fill_between(timeline_data, data, color='blue', alpha=0.3, zorder=0)
 
 
 def get_audio_channel(channel_index: int, audio_data: np.ndarray):
