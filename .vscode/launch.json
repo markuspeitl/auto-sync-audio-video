@@ -22,11 +22,15 @@
       }
     },
     {
-      "name": "Python: sync_remux_process_video_audio.py",
+      "name": "Python: ide-were-were sync_remux_process_video_audio.py",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/sync_remux_process_video_audio.py",
       "args": [
+        "20231204_204607.mp4",
+        "230412_0072S12.wav",
+        "--play_on_finish",
+        "--show_plot",
       ]
     },
     {
@@ -37,11 +41,11 @@
       "args": [
         "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/20231204_222341.mp4",
         "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/230412_0079S12.wav",
-        "--plot_song_activity_detection",
-        "--rough_activity_block_size",
-        "1.0",
-        "--start_valley_threshold",
-        "0.01"
+        //"--plot_song_activity_detection",
+        //"--rough_activity_block_size",
+        //"1.0",
+        //"--start_valley_threshold",
+        //"0.01"
         //"--keep_transient_files"
       ]
     },

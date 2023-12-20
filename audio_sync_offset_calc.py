@@ -143,7 +143,6 @@ def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
     # Impulse/clap detection options
     parser.add_argument('-it', '-ithreshold', '--impulse_ramp_threshold', '--impulse_threshold', type=float, help="Threshold of the loudness change that must have been at least occured for a sound/ramp to be marked as clap/impulse [0.0, 1.0]", default=0.4)
     parser.add_argument('-ir', '-irelease', '--impulse_release_delay', '--impulse_release', type=float, help="Time in seconds from which another impulse can be detected after detecting an impulse in the audio data", default=0.1)
-    parser.add_argument('-plot', '--show_plot', '--plot_impulses', action="store_true", help="Show plots of the impulse/clap detection responses")
 
 
 def main():
@@ -155,6 +154,7 @@ def main():
     parser.add_argument('audio_src_paths', nargs='+', help="The audio files where the synchronisation offset between them should be calculated (the first audio file is used as reference for the offset of the other ones)")
     # parser.add_argument('audio_src_path', help="Audio file to be muxed/mixed and synced with the video data of the 'video_src_path' file")
     add_generic_optional_parser_arguments(parser)
+    parser.add_argument('-plot', '--show_plot', '--plot_impulses', action="store_true", help="Show plots of the impulse/clap detection responses")
 
     args: argparse.Namespace = parser.parse_args()
 

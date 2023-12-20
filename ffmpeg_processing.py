@@ -87,7 +87,7 @@ def trim_media_output(src_file_path: str, target_file_path: str, output_range_ti
     return target_file_path
 
 
-def remux_video_audio_with_offset(video_file_path, audio_file_path, audio_offset_sec, output_range_timestamps: tuple = None):
+def remux_video_audio_with_offset(video_file_path: str, audio_file_path: str, audio_offset_sec: float = 0.0, output_range_timestamps: tuple = None):
     # remuxed_video_path = add_name_suffix_path(video_file_path, "_remuxed", ".mp4")
 
     if (not output_range_timestamps):
@@ -161,7 +161,7 @@ match_duration = re.compile('(?<=duration=).+')
 
 
 def get_ffprobe_meta_field(media_file_path: str, field_label: str):
-    field_matcher = re.compile(f'(?<={field_label}).+')
+    field_matcher = re.compile(f'(?<={field_label}=).+')
 
     cmd = f"{ffprobe_binary_location} -i {media_file_path} -show_format"
 

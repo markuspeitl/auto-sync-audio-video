@@ -20,21 +20,6 @@ def convert_dtype(data: np.ndarray, dtype=np.float32):
     return data
 
 
-"""def normalize_to_float(data: np.ndarray, dtype=np.float32):
-
-    # max_numpy_array_int_value = np.iinfo(data.dtype).max - np.iinfo(data.dtype).min
-    # print(max_numpy_array_int_value)
-
-    float_data = convert_dtype(data, dtype)
-
-    max_data_value = np.max(float_data)
-    min_data_value = np.min(float_data)
-    # scale symmetrical, by which max has less headroom
-
-    # return (float_data - min_data_value) / (max_data_value - min_data_value)
-"""
-
-
 def normalize_per_channel(normalize_function: Callable, data: np.ndarray, dtype=np.float32):
     if (len(data.shape) > 1):
         for audio_channel_index in range(0, data.shape):

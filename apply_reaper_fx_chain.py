@@ -10,6 +10,7 @@ from typing import Any
 
 from path_util import add_name_suffix_path
 from platform_bind_util import get_platform_store_value
+from play_on_finish import add_play_on_finish_arguments, play_all_if_enabled
 
 
 class NormalizeModes(Enum):
@@ -244,45 +245,63 @@ def render_fx_candidates(source_audio_paths: list[str], fx_chain_paths: list[str
     return fx_chain_to_output_paths
 
 
-def main():
+def apply_reaper_fx_chain(source_audio_paths: list[str], target_audio_paths: list[str], args: argparse.Namespace):
+    if (args.multi_fx_candidates):
+        if (target_audio_paths and len(target_audio_paths) > 0):
+            raise Exception("'--target_audio_paths' option is not allowed when '--multi_fx_candidates' is enabled")
 
-    parser = argparse.ArgumentParser(
-        description="Apply reaper fx chain .RfxChain on the selected audio and write result to disk"
-    )
+        fx_chain_to_output_paths = render_fx_candidates(source_audio_paths, args.audio_effect_chains, options=args.__dict__)
+        print(fx_chain_to_output_paths)
 
-    parser.add_argument('source_audio_paths', nargs='+', help="Audio file to be processed by fx chain (can be a video file with an audio stream as well)")
-    parser.add_argument('-out', '-targets', '--target_audio_paths', '--processed_paths', nargs='+', help="Path of the output file to be created, (adds a suffix to input file by default if not specified)")
+        return fx_chain_to_output_paths
+
+    processed_audio_file_paths = apply_audio_fx_chains(source_audio_paths, args.audio_effect_chains, target_audio_paths, options=args.__dict__)
+
+    return processed_audio_file_paths
+
+# def apply_video_audio_fx_chain(source_paths: list[str], args: argparse.Namespace):
+#    processed_audio_file_paths = apply_audio_fx_chains([activity_trimmed_video_path], args.audio_effect_chains, options=args.__dict__)
+#    final_remuxed_video = remux_video_audio_with_offset(activity_trimmed_video_path, processed_audio_file_paths[0], 0)
+
+
+def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
+
     parser.add_argument('-fx', '-fxc', '--audio_effect_chains', '--fx_chains', nargs='+', type=str, help="Reaper audio effects chains to be applied to the 'external audio' before muxing into the video, are applied one after the other", default=default_fx_chain)
     parser.add_argument('-r', '-rc', '-codec', '--render_codec', '--render_encoder', type=str, help="Specify the lossless codec and bit depth of the output, when the file will stay around for a time -> use flac: flac_16, flac_24, wav_16_pcm, wav_24_pcm, wav_32_pcm, wavpack_24 ", default=None)
 
     parser.add_argument('-nm', '--normalize_mode', type=float, help="Audio output normalization type: 1=peak, 2=true peak, 3=lufs-i, 4=lufs-s, 5=lufs-m", default=default_output_norm_mode)
     parser.add_argument('-nl', '--normalize_level', type=float, help="Audio output normalization level in dB [-inf, -0.0] dB", default=default_output_norm_level)
 
-    parser.add_argument('-p', '--play_on_finish_binary', '--play_bin', help="Use this application to play back the processed audio, when the fx chains have been applied")
-    parser.add_argument('-mult', '--multi_fx_candidates', '--mult_candidates', action="store_true", help="Render one output candidate for each specified fx_chain per input file, instead of applying all fx_chains on the same input file")
-
     # Compability patching options (adapting to uncommon configurations)
     parser.add_argument('-reaper', '--reaper_binary_location', help="Location of the reaper binary to process the audio batch with", default=default_reaper_binary_location)
     parser.add_argument('-batch_dir', '--batch_list_target_dir', help="Location of the directory to store the reaper batch file in, which is needed to run the processing when calling reaper binary", default=default_reaper_batch_list_target_dir)
 
+
+def add_input_output_options(parser: argparse.ArgumentParser):
+    parser.add_argument('source_audio_paths', nargs='+', help="Audio file to be processed by fx chain (can be a video file with an audio stream as well)")
+    parser.add_argument('-out', '-targets', '--target_audio_paths', '--processed_paths', nargs='+', help="Path of the output file to be created, (adds a suffix to input file by default if not specified)")
+
+
+def main():
+
+    parser = argparse.ArgumentParser(
+        description="Apply reaper fx chain .RfxChain on the selected audio and write result to disk"
+    )
+
+    add_input_output_options(parser)
+    add_generic_optional_parser_arguments(parser)
+
+    add_play_on_finish_arguments(parser)
+    parser.add_argument('-mult', '--multi_fx_candidates', '--mult_candidates', action="store_true", help="Render one output candidate for each specified fx_chain per input file, instead of applying all fx_chains on the same input file")
+
     args: argparse.Namespace = parser.parse_args()
 
-    if (args.multi_fx_candidates):
-        if (args.target_audio_paths and len(args.target_audio_paths) > 0):
-            raise Exception("'--target_audio_paths' option is not allowed when '--multi_fx_candidates' is enabled")
+    processed_audio_file_paths = apply_reaper_fx_chain(args.source_audio_paths, args.target_audio_paths, args)
 
-        fx_chain_to_output_paths = render_fx_candidates(args.source_audio_paths, args.audio_effect_chains, options=args.__dict__)
-        print(fx_chain_to_output_paths)
-    else:
+    processed_audio_files_list = "\n".join(processed_audio_file_paths)
+    print(processed_audio_files_list)
 
-        processed_audio_file_paths = apply_audio_fx_chains(args.source_audio_paths, args.audio_effect_chains, args.target_audio_paths, options=args.__dict__)
-
-        if (args.play_on_finish_binary):
-            processed_audio_files_line_list = " ".join(processed_audio_file_paths)
-            os.system(f"{args.play_on_finish_binary} {processed_audio_files_line_list}")
-
-        processed_audio_files_list = "\n".join(processed_audio_file_paths)
-        print(processed_audio_files_list)
+    play_all_if_enabled(processed_audio_file_paths, args)
 
 
 if __name__ == '__main__':
