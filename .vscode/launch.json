@@ -38,7 +38,7 @@
         "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/20231204_222341.mp4",
         "/mnt/CRU1TB/recordingprojects/minha-estrella-guia/230412_0079S12.wav",
         "--plot_song_activity_detection",
-        "--song_detection_block_size",
+        "--rough_activity_block_size",
         "1.0",
         "--start_valley_threshold",
         "0.01"
@@ -98,7 +98,9 @@
       "request": "launch",
       "program": "${workspaceFolder}/detect_audio_activity_trim.py",
       "args": [
-        //"--show_plot",
+        "--show_plot",
+        "--rough_activity_block_size",
+        "3.0",
         "--overwrite_target",
         "--play_on_finish",
         "20231204_204607_remuxed.mkv"

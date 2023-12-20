@@ -1,8 +1,9 @@
+from collections.abc import Iterable
 from typing import Tuple, TypedDict
 from typing import Any
 import numpy as np
 from audio_plotting import show_waveforms
-from common_audio_processing import read_audio_of_file, resample_audio
+from common_audio_processing import normalize_symmetrical_float, read_audio_of_file, resample_audio
 from dot_dict_conversion import to_dot_dict_with_defaults
 from time_conversion_util import print_sample_range_timestamps, sample_index_range_to_timestamps, sec_to_sample_index
 
@@ -47,13 +48,17 @@ def merge_close_ranges(tuple_ranges: list[tuple], close_gap_samples_threshold: i
     return tuple_ranges
 
 
-def detect_on_ranges(array_data, on_threshold=0.1) -> list[tuple[int]]:
+def detect_on_ranges(array_data: np.ndarray, on_threshold: float = 0.1) -> list[tuple[int]]:
 
     detected_on_range_tuples: list[tuple[int]] = []
 
     range_start: int = -1
     is_inside_range: bool = False
     for index, sample in enumerate(array_data):
+
+        # Handling single channel data
+        if (not isinstance(sample, Iterable)):
+            sample = np.array([sample])
 
         if (any(sample >= on_threshold) and not is_inside_range):
 
@@ -72,7 +77,7 @@ def detect_on_ranges(array_data, on_threshold=0.1) -> list[tuple[int]]:
     return detected_on_range_tuples
 
 
-def detect_song_range(array_data, on_threshold=0.1, close_gap_samples_threshold: int = 8) -> Tuple[tuple, list[tuple]]:
+def detect_active_range(array_data: np.ndarray, on_threshold: float = 0.1, close_gap_samples_threshold: int = 8) -> Tuple[tuple, list[tuple]]:
 
     detected_on_range_tuples = detect_on_ranges(array_data, on_threshold)
     detected_on_range_tuples = merge_close_ranges(detected_on_range_tuples, close_gap_samples_threshold=close_gap_samples_threshold)
@@ -92,7 +97,7 @@ def scale_sample_index(src_sample_index: int, src_sample_rate: float, target_sam
     return int(scaled_index)
 
 
-def convert_sample_tuple(range_tuple: tuple, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False) -> tuple:
+def scale_sample_tuple(range_tuple: tuple, src_sample_rate: float, target_sample_rate: float, round_to_nearest=False) -> tuple:
 
     scaled_index_list = []
 
@@ -103,12 +108,16 @@ def convert_sample_tuple(range_tuple: tuple, src_sample_rate: float, target_samp
 
 
 # find audio ramp start
-def find_valley_index(data_array, start_index, direction=-1, valley_threshold=0.1) -> int:
+def find_valley_index(data_array: np.ndarray, start_index: int, direction: int = -1, valley_threshold: float = 0.1) -> int:
 
     index = start_index
     while index >= 0 and index < len(data_array):
 
         current_sample_val = data_array[index]
+
+        # Handling single channel data
+        if (not isinstance(current_sample_val, Iterable)):
+            current_sample_val = np.array([current_sample_val])
 
         if (all(current_sample_val < valley_threshold)):
             return index
@@ -135,87 +144,137 @@ def add_time_to_sample_range(sample_range_tuple: tuple, add_time_tuple_seconds: 
 
 
 class ActivityDetectionOptions(TypedDict):
-    song_detection_block_size: float
-    song_on_threshold: float
-    range_refine_block_size: float
+    rough_activity_block_size: float
+    rough_active_threshold: float
+    fine_activity_block_size: float
     start_valley_threshold: float
     end_valley_threshold: float
-    song_start_prerun: float
-    song_end_postrun: float
+    activity_start_prerun: float
+    activity_end_postrun: float
     show_plot: float
 
 
 activity_detection_options_defaults: ActivityDetectionOptions = {
-    'song_detection_block_size': 4.0,
-    'song_on_threshold': 0.1,
-    'range_refine_block_size': 1.0,
+    'rough_activity_block_size': 4.0,
+    'rough_active_threshold': 0.15,
+    'fine_activity_block_size': 0.5,
     'start_valley_threshold': 0.03,
-    'end_valley_threshold': 0.005,
-    'song_start_prerun': -1.0,
-    'song_end_postrun': 0.0,
+    'end_valley_threshold': 0.0175,
+    'activity_start_prerun': -0.65,
+    'activity_end_postrun': 0.3,
     'show_plot': False,
 }
 
 
-def detect_song_time_range(video_file_path: str, options: ActivityDetectionOptions = activity_detection_options_defaults):
+def detect_audio_resampled_active_range(audio_data: np.ndarray, sample_rate: float, resampled_block_size_sec: float, active_threshold: float, plot: bool = False, plot_block: bool = False):
+
+    resampled_audio_blocks_data, resampled_audio_samplerate = resample_audio(resampled_block_size_sec, np.abs(audio_data), sample_rate)
+
+    """if (len(resampled_audio_blocks_data.shape) > 1):
+        for index in range(0, len(resampled_audio_blocks_data.shape)):
+            resampled_audio_blocks_data[index] = np.convolve(resampled_audio_blocks_data[index], np.ones(3, dtype=int), 'valid')
+    else:
+        resampled_audio_blocks_data = np.convolve(resampled_audio_blocks_data, np.ones(3, dtype=float) / 3, 'valid')"""
+
+    active_range_samples, all_detected_ranges = detect_active_range(resampled_audio_blocks_data, active_threshold)
+
+    print_sample_range_timestamps(active_range_samples, resampled_audio_samplerate)
+
+    if (plot):
+        show_waveforms(resampled_audio_blocks_data, resampled_audio_samplerate, marker_indices=active_range_samples, marked_ranges=all_detected_ranges, fill_down=True, block=plot_block)
+
+    return active_range_samples, resampled_audio_samplerate
+
+
+def refine_active_audio_range(audio_data: np.ndarray, sample_rate: float, active_range_samples: tuple[int], active_range_samplerate: float, refine_block_size_sec: float, start_valley_threshold: float, end_valley_threshold: float, plot: bool = False, plot_block: bool = False):
+
+    refine_audio_blocks_data, refine_audio_samplerate = resample_audio(refine_block_size_sec, np.abs(audio_data), sample_rate)
+
+    to_refine_current_active_range: tuple[int] = scale_sample_tuple(active_range_samples, active_range_samplerate, refine_audio_samplerate)
+
+    refined_song_range: tuple[int] = refine_range_towards_valleys(to_refine_current_active_range, refine_audio_blocks_data, valley_thresholds=(start_valley_threshold, end_valley_threshold))
+
+    print_sample_range_timestamps(refined_song_range, refine_audio_samplerate)
+
+    if (plot):
+        show_waveforms(refine_audio_blocks_data, refine_audio_samplerate, marker_indices=refined_song_range, marked_ranges=[to_refine_current_active_range], fill_down=True, block=plot_block)
+
+    return refined_song_range, refine_audio_samplerate
+
+
+def detect_audio_activity_range_of_file(media_file_path: str, options: ActivityDetectionOptions = activity_detection_options_defaults):
 
     options: ActivityDetectionOptions = to_dot_dict_with_defaults(options, activity_detection_options_defaults)
 
-    # extracted_audio_path = get_extracted_audio_path(video_file_path)
-    sample_rate, audio_data = read_audio_of_file(video_file_path)
+    sample_rate, audio_data = read_audio_of_file(media_file_path)
 
+    audio_channel = audio_data
+    if (audio_data.shape[1] > 1):
+        audio_channel = (audio_data[:, 0] + audio_data[:, 1]) / 2
+
+    audio_channel = normalize_symmetrical_float(audio_channel)
+    # show_waveforms(audio_channel, sample_rate, fill_down=False, block=True)
+
+    print("Rough audio activity range estimate:")
+    rough_song_range, rough_audio_samplerate = detect_audio_resampled_active_range(audio_channel, sample_rate, options.rough_activity_block_size, options.rough_active_threshold, options.show_plot)
+
+    print("Refined activity range estimate:")
+    fine_song_range, fine_audio_samplerate = refine_active_audio_range(audio_channel, sample_rate, rough_song_range, rough_audio_samplerate, options.fine_activity_block_size, options.start_valley_threshold, options.end_valley_threshold, options.show_plot, True)
+
+    print("Final audio activity range estimate:")
+    final_song_range: tuple[int] = add_time_to_sample_range(fine_song_range, (options.activity_start_prerun, options.activity_end_postrun), fine_audio_samplerate)
+    print_sample_range_timestamps(final_song_range, fine_audio_samplerate)
+
+    final_song_range_timestamps: tuple[str] = sample_index_range_to_timestamps(final_song_range, fine_audio_samplerate)
+
+    return final_song_range_timestamps
+
+    """fine_block_time_sec: float = options.fine_activity_block_size
+
+    fine_audio_blocks_data, fine_audio_samplerate = resample_audio(fine_block_time_sec, np.abs(audio_channel), sample_rate)
+
+    fine_rough_song_range: tuple[int] = scale_sample_tuple(rough_song_range, rough_audio_samplerate, fine_audio_samplerate)
+
+    fine_song_range: tuple[int] = refine_range_towards_valleys(fine_rough_song_range, fine_audio_blocks_data, valley_thresholds=(options.start_valley_threshold, options.end_valley_threshold))
+    print_sample_range_timestamps(fine_song_range, fine_audio_samplerate)"""
+
+    """if (options.show_plot):
+
+        show_waveforms(fine_audio_blocks_data, fine_audio_samplerate, marker_indices=fine_rough_song_range, marked_ranges=[final_song_range], fill_down=True, block=False)"""
+
+    # differentiated_audio = apply_audio_differentiation(rough_audio_blocks_data_fine)
+    # differentiated_audio = apply_audio_differentiation(differentiated_audio)
+
+    # plotting_audio = np.concatenate(rough_audio_blocks_data, rough_audio_blocks_data_fine)
+    # show_waveforms(rough_audio_blocks_data, rough_audio_samplerate, marker_indices=rough_song_range, marked_ranges=all_detected_ranges, fill_down=True, block=False)
+
+    # extracted_audio_path = get_extracted_audio_path(video_file_path)
     # if (not options.keep_transient_files):
     #    delete_video_extracted_audio(video_file_path)
 
     # show_waveforms(audio_data, sample_rate)
 
     # abs data to make averaging operations cumulative -> more effect as positive and negative values do not cancel each
-    downsampled_audio, downsampled_rate = resample_audio(options.song_detection_block_size, np.abs(audio_data), sample_rate)
+    """rough_audio_blocks_data, rough_audio_samplerate = resample_audio(options.rough_activity_block_size, np.abs(audio_data), sample_rate)
 
-    # selected_loud_samples_indices, _ = np.where(np.abs(downsampled_audio) >= 0.1)
+    # selected_loud_samples_indices, _ = np.where(np.abs(rough_audio_blocks_data) >= 0.1)
 
-    # downsampled_audio[downsampled_audio >= options.song_on_threshold] = 1.0
-    # downsampled_audio[downsampled_audio < options.song_on_threshold] = 0.0
+    # rough_audio_blocks_data[rough_audio_blocks_data >= options.rough_active_threshold] = 1.0
+    # rough_audio_blocks_data[rough_audio_blocks_data < options.rough_active_threshold] = 0.0
 
-    rough_song_range, all_detected_ranges = detect_song_range(downsampled_audio, options.song_on_threshold)
-    print_sample_range_timestamps(rough_song_range, downsampled_rate)
+    rough_song_range, all_detected_ranges = detect_active_range(rough_audio_blocks_data, options.rough_active_threshold)
+    print_sample_range_timestamps(rough_song_range, rough_audio_samplerate)"""
 
-    fine_block_time_sec = options.range_refine_block_size
+    # show_waveforms(rough_audio_blocks_data_fine, rough_audio_samplerate_fine)
+    # show_waveforms(differentiated_audio, rough_audio_samplerate_fine)
 
-    downsampled_audio_fine, downsampled_rate_fine = resample_audio(fine_block_time_sec, np.abs(audio_data), sample_rate)
-    # differentiated_audio = apply_audio_differentiation(downsampled_audio_fine)
-    # differentiated_audio = apply_audio_differentiation(differentiated_audio)
+    # show_waveforms(rough_audio_blocks_data, rough_audio_samplerate)
+    # show_waveforms(rough_audio_blocks_data_left, rough_audio_samplerate)
 
-    fine_rough_song_range = convert_sample_tuple(rough_song_range, downsampled_rate, downsampled_rate_fine)
+    # norm_float_audio = normalize_to_float(rough_audio_blocks_data_left)
 
-    fine_song_range = refine_range_towards_valleys(fine_rough_song_range, downsampled_audio_fine, valley_thresholds=(options.start_valley_threshold, options.end_valley_threshold))
-    print_sample_range_timestamps(fine_song_range, downsampled_rate_fine)
+    # print(rough_audio_blocks_data_left)
 
-    final_song_range = add_time_to_sample_range(fine_song_range, (options.song_start_prerun, options.song_end_postrun), downsampled_rate_fine)
-    print_sample_range_timestamps(final_song_range, downsampled_rate_fine)
-
-    if (options.show_plot):
-
-        # plotting_audio = np.concatenate(downsampled_audio, downsampled_audio_fine)
-
-        show_waveforms(downsampled_audio, downsampled_rate, marker_indices=rough_song_range, marked_ranges=all_detected_ranges, fill_down=True, block=False)
-
-        show_waveforms(downsampled_audio_fine, downsampled_rate_fine, marker_indices=fine_rough_song_range, marked_ranges=[final_song_range], fill_down=True, block=False)
-
-    # show_waveforms(downsampled_audio_fine, downsampled_rate_fine)
-    # show_waveforms(differentiated_audio, downsampled_rate_fine)
-
-    # show_waveforms(downsampled_audio, downsampled_rate)
-    # show_waveforms(downsampled_audio_left, downsampled_rate)
-
-    # norm_float_audio = normalize_to_float(downsampled_audio_left)
-
-    # print(downsampled_audio_left)
-
-    # selected_loud_samples_indices, _ = np.where(np.abs(downsampled_audio_left) >= 30000)
+    # selected_loud_samples_indices, _ = np.where(np.abs(rough_audio_blocks_data_left) >= 30000)
 
     # print(selected_loud_samples_indices)
-
-    final_song_range_timestamps = sample_index_range_to_timestamps(final_song_range, downsampled_rate_fine)
-
-    return final_song_range_timestamps
