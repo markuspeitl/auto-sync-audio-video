@@ -5,7 +5,7 @@ from typing import Any
 import numpy as np
 from audio_plotting import show_waveforms
 from common_audio_processing import normalize_symmetrical_float, read_audio_of_file, resample_audio
-from dot_dict_conversion import to_dot_dict_with_defaults
+from dot_dict_conversion import to_dict_with_defaults, to_dot_dict_with_defaults
 from time_conversion_util import print_sample_range_timestamps, sample_index_range_to_timestamps, sec_to_sample_index
 
 
@@ -218,7 +218,7 @@ def refine_active_audio_range(audio_data: np.ndarray, sample_rate: float, active
 
 def detect_audio_activity_range_of_file(media_file_path: str, options: ActivityDetectionOptions = activity_detection_options_defaults):
 
-    options: ActivityDetectionOptions = to_dot_dict_with_defaults(options, activity_detection_options_defaults)
+    options: ActivityDetectionOptions = to_dict_with_defaults(options, activity_detection_options_defaults)
 
     sample_rate, audio_data = read_audio_of_file(media_file_path)
 
@@ -230,13 +230,31 @@ def detect_audio_activity_range_of_file(media_file_path: str, options: ActivityD
     # show_waveforms(audio_channel, sample_rate, fill_down=False, block=True)
 
     print("Rough audio activity range estimate:")
-    rough_song_range, rough_audio_samplerate = detect_audio_resampled_active_range(audio_channel, sample_rate, options.rough_activity_block_size, options.rough_active_threshold, options.show_plot)
+    rough_song_range, rough_audio_samplerate = detect_audio_resampled_active_range(
+        audio_channel,
+        sample_rate,
+        options.get('rough_activity_block_size'),
+        options.get('rough_active_threshold'),
+        options.get('show_plot'),
+    )
 
     print("Refined activity range estimate:")
-    fine_song_range, fine_audio_samplerate = refine_active_audio_range(audio_channel, sample_rate, rough_song_range, rough_audio_samplerate, options.fine_activity_block_size, options.start_valley_threshold, options.end_valley_threshold, options.show_plot, True)
+    fine_song_range, fine_audio_samplerate = refine_active_audio_range(
+        audio_channel,
+        sample_rate,
+        rough_song_range,
+        rough_audio_samplerate,
+        options.get('fine_activity_block_size'),
+        options.get('start_valley_threshold'),
+        options.get('end_valley_threshold'),
+        options.get('show_plot'),
+    )
 
     print("Final audio activity range estimate:")
-    final_song_range: tuple[int] = add_time_to_sample_range(fine_song_range, (options.activity_start_prerun, options.activity_end_postrun), fine_audio_samplerate)
+    final_song_range: tuple[int] = add_time_to_sample_range(
+        fine_song_range,
+        (options.get('activity_start_prerun'), options.get('activity_end_postrun')),
+        fine_audio_samplerate)
     print_sample_range_timestamps(final_song_range, fine_audio_samplerate)
 
     final_song_range_timestamps: tuple[str] = sample_index_range_to_timestamps(final_song_range, fine_audio_samplerate)

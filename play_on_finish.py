@@ -11,7 +11,7 @@ def add_play_on_finish_arguments(parser: argparse.ArgumentParser, namespace: str
 
 def get_play_options_state(args: argparse.Namespace, namespace: str = ""):
     args_dict: dict = vars(args)
-    return args_dict[f"{namespace}play_on_finish"], args_dict[f"{namespace}play_on_finish_binary"]
+    return args_dict.get(f"{namespace}play_on_finish"), args_dict.get(f"{namespace}play_on_finish_binary")
 
 
 def is_playable(path: str):
@@ -21,7 +21,7 @@ def is_playable(path: str):
 def play_if_enabled(media_file_path: str, args: argparse.Namespace, namespace: str = ""):
     do_play, binary = get_play_options_state(args, namespace)
 
-    if (not do_play or not is_playable(media_file_path)):
+    if (not do_play or not binary or not is_playable(media_file_path)):
         return
 
     os.system(f'{binary} {media_file_path}')
@@ -29,12 +29,12 @@ def play_if_enabled(media_file_path: str, args: argparse.Namespace, namespace: s
 
 def play_series_if_enabled(media_file_paths: list[str], args: argparse.Namespace, namespace: str = ""):
     for media_file_path in media_file_paths:
-        play_if_enabled(media_file_path, args. namespace)
+        play_if_enabled(media_file_path, args, namespace)
 
 
 def play_all_if_enabled(media_file_paths: list[str], args: argparse.Namespace, namespace: str = ""):
     do_play, binary = get_play_options_state(args, namespace)
-    if (not do_play):
+    if (not do_play or not binary):
         return
 
     playable_paths = filter(is_playable, media_file_paths)

@@ -39,8 +39,14 @@ def check_set_or_set_defaults(target_options: dict[str, Any], defaults_dict: dic
     return target_options
 
 
-def to_dot_dict_with_defaults(item: Union[object, dict], defaults_dict: dict[str, Any]) -> DotDict:
+def to_dict_with_defaults(item: Union[object, dict], defaults_dict: dict[str, Any]) -> DotDict:
 
     item_dict: dict[str, Any] = to_dict(item)
     check_set_or_set_defaults(item_dict, defaults_dict)
+    return item_dict
+
+
+def to_dot_dict_with_defaults(item: Union[object, dict], defaults_dict: dict[str, Any]) -> DotDict:
+
+    item_dict: dict[str, Any] = to_dict_with_defaults(item, defaults_dict)
     return DotDict(item_dict)

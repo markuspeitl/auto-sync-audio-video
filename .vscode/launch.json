@@ -5,7 +5,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Python: Current File",
+      "name": "Current File",
       "type": "python",
       "request": "launch",
       "program": "${file}",
@@ -13,7 +13,7 @@
       "justMyCode": true
     },
     {
-      "name": "Python: Attach",
+      "name": "Attach",
       "type": "python",
       "request": "attach",
       "connect": {
@@ -22,7 +22,7 @@
       }
     },
     {
-      "name": "Python: ide-were-were sync_remux_process_video_audio.py",
+      "name": "sync_remux_process_video_audio.py ide-were-were ",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/sync_remux_process_video_audio.py",
@@ -30,11 +30,17 @@
         "20231204_204607.mp4",
         "230412_0072S12.wav",
         "--play_on_finish",
-        "--show_plot",
+        //"--show_plot",
+        "--overwrite_output",
+        //"--no_impulse_sync",
+        //"--no_activity_trim",
+        //"--keep_transient_files",
+        "--extract_thumbnails_count",
+        "2",
       ]
     },
     {
-      "name": "Python: minha-estrella-guia sync_remux_process_video_audio.py",
+      "name": "sync_remux_process_video_audio.py minha-estrella-guia",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/sync_remux_process_video_audio.py",
@@ -50,7 +56,7 @@
       ]
     },
     {
-      "name": "Python: minha-estrella-guia apply_reaper_fx_chain.py",
+      "name": "apply_reaper_fx_chain.py minha-estrella-guia",
       "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/apply_reaper_fx_chain.py",
@@ -105,7 +111,7 @@
         "--show_plot",
         "--rough_activity_block_size",
         "3.0",
-        "--overwrite_target",
+        "--overwrite_output",
         "--play_on_finish",
         "20231204_204607_remuxed.mkv"
       ]

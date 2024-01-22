@@ -3,6 +3,7 @@ import argparse
 import os
 import sys
 from audio_sync_offset_calc import add_generic_optional_parser_arguments as add_sync_calc_generic_optional_parser_arguments, calc_sync_offset, calc_sync_offsets
+from dot_dict_conversion import to_dict
 from ffmpeg_processing import remux_video_audio_with_offset
 from play_on_finish import add_play_on_finish_arguments, play_if_enabled
 
@@ -36,21 +37,36 @@ def add_generic_optional_parser_arguments(parser: argparse.ArgumentParser):
 
 
 def video_sync_audio_remux(video_src_path: str, audio_src_path: str, args: argparse.Namespace):
-    if (args.no_impulse_sync):
-        args.remux_sync_offset_sec = 0
 
-    elif (not args.remux_sync_offset_sec):
-        args.remux_sync_offset_sec = calc_sync_offset(video_src_path, audio_src_path, args.impulse_ramp_threshold, args.impulse_release_delay)
+    options: dict = to_dict(args)
+
+    remux_sync_offset_sec = options.get('remux_sync_offset_sec')
+
+    if (options.get('no_impulse_sync')):
+        remux_sync_offset_sec = 0
+
+    elif (not remux_sync_offset_sec):
+        remux_sync_offset_sec = calc_sync_offset(
+            video_src_path,
+            audio_src_path,
+            impulse_ramp_threshold=options.get('impulse_ramp_threshold'),
+            detect_release_threshold_sec=options.get('impulse_release_delay'),
+        )
 
     remuxed_video_file_path = None
     # if (not args.no_video_remuxing):
-    remuxed_video_file_path = remux_video_audio_with_offset(args.video_src_path, args.audio_src_path, args.remux_sync_offset_sec)
+    remuxed_video_file_path = remux_video_audio_with_offset(
+        video_src_path,
+        audio_src_path,
+        audio_offset_sec=remux_sync_offset_sec,
+        overwrite_output=options.get('overwrite_output')
+    )
     print(remuxed_video_file_path)
 
     return remuxed_video_file_path
 
-    # print(args.remux_sync_offset_sec)
-    # return args.remux_sync_offset_sec
+    # print(remux_sync_offset_sec)
+    # return remux_sync_offset_sec
 
 
 def main():
@@ -66,6 +82,7 @@ def main():
 
     add_play_on_finish_arguments(parser)
     parser.add_argument('-k', '--keep_transient_files', '--keep',                   action="store_true", help="Keep files that were the results of processing or extraction, but can be recalculated from the source files if needed")
+    parser.add_argument('-y', '--overwrite_output', '--overwrite',                  action="store_true", help="Overwrite output media if it exists")
 
     add_generic_optional_parser_arguments(parser)
 
