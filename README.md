@@ -17,23 +17,41 @@ track and discarding the embedded audio track while cutting both to the size of 
 They even go 1 step further and can use REAPER to automatically apply an audio effects chain on the audio track,
 therefore making it possible to generate multiple options for the videos and then just pick one to publish.
 
-### How does it work?
-1. Detect Impulses, Sync, remux:  
+## How to use:
+``python3 sync_remux_process_video_audio.py /home/my_video.mp4 /home/external_audio.wav``
+
+## Partial usage:
+### Full processing chain  
+``python3 sync_remux_process_video_audio.py --help``  
+### Sync audio and video  
+``python3 video_sync_audio_remux.py --help``  
+### Detecting active audio range  
+ and trim file to range    
+``python3 detect_audio_activity_trim.py --help``  
+### Calculate the offset  
+in msec between 2 audio files of the same sound source    
+``python3 audio_sync_offset_calc.py --help``  
+### Apply an audio effects  
+chain using reaper and render to output file    
+``python3 apply_reaper_fx_chain.py --help``  
+
+## How does it work?
+1. **Detect Impulses, Sync, remux:**  
 Detects impulses in embedded audio and on the external track (using algorithmic deviation) and matches those impulses to find out the difference offset.
 Then mixes the external audio with the video, discarding the embedded track in the process.
-2. Detect Activity Range (on remuxed video), truncate/trim:  
+2. **Detect Activity Range (on remuxed video), truncate/trim:**  
 Uses an averaging window and threshold to detect zones with high audio activity, then descends the start and end ramp to optimize
 where the audio activity starts and where it end.
 Through this the parts before and after we start talking can be discarded.
-3. Apply audio fx on the audio stream (of the video) and then remux:  
+3. **Apply audio fx on the audio stream (of the video) and then remux:**  
 Use reaper and apply the selected FX chain to the audio, after normalizing it.
 Useful when not wanting to spend a lot of time on audio postprocessing and optimization.
-4. Pull thumbnails:  
+4. **Pull thumbnails:**  
 Use ffmpeg to pull n thumbnail images at even intervals from the video.
-5. (Transcribe audio) was more of an experiment: 
+5. **(Transcribe audio) was more of an experiment:** 
 does work somewhat even when utilizing machine learning transcription options.  
 Probably works fine for just talking, look at `transcribe_audio.py` if you want to do this.
-6. Play final video using selected program:  
+6. **Play final video using selected program:**  
 Uses a system call to play the rendered video with a binary/program of choice
 
 ### Platforms:
